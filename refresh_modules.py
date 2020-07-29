@@ -413,7 +413,7 @@ if __name__ == '__main__':
         syntax_tree = ast.fix_missing_locations(syntax_tree)
 
         module_dir = target_dir / "plugins" / "modules"
-        module_dir.mkdir(exist_ok=True)
+        module_dir.mkdir(parents=True, exist_ok=True)
         module_py_file = module_dir / "{name}.py".format(name=self.name)
         with module_py_file.open("w") as fd:
             fd.write(astunparse.unparse(syntax_tree))
@@ -668,7 +668,17 @@ class SwaggerFile:
 
 
 def main():
-    target_dir = pathlib.Path("vmware_rest")
+
+    parser = argparse.ArgumentParser(description="Build the vmware_rest modules.")
+    parser.add_argument(
+        "--target-dir",
+        dest="target_dir",
+        type=pathlib.Path,
+        default=pathlib.Path("vmware_rest"),
+        help="location of the target repository (default: ./vmware_rest)",
+    )
+    args = parser.parse_args()
+
     module_list = []
     p = pathlib.Path("7.0.0")
     for json_file in p.glob("*.json"):
@@ -689,16 +699,16 @@ def main():
                     resource, definitions=swagger_file.definitions
                 )
                 if len(module.default_operationIds) > 0:
-                    module.renderer(target_dir=target_dir)
+                    module.renderer(target_dir=args.target_dir)
                     module_list.append(module.name)
             module = AnsibleModule(resource, definitions=swagger_file.definitions)
             if len(module.default_operationIds) > 0:
-                module.renderer(target_dir=target_dir)
+                module.renderer(target_dir=args.target_dir)
                 module_list.append(module.name)
 
     print("Updating the galaxy.yml file...")
     yaml = YAML()
-    my_galaxy = target_dir / "galaxy.yml"
+    my_galaxy = args.target_dir / "galaxy.yml"
     galaxy_contents = yaml.load(my_galaxy.open("r"))
     galaxy_contents["build_ignore"] = []
     for m in module_list:
