@@ -257,7 +257,7 @@ class AnsibleModuleBase:
     def gen_main_func(self):
         raise NotImplementedError()
 
-    def renderer(self):
+    def renderer(self, target_dir):
         # syntax_tree = ast.parse(MODULE_TEMPLATE)
         DEFAULT_MODULE = """
 #!/usr/bin/env python
@@ -412,7 +412,7 @@ if __name__ == '__main__':
         syntax_tree = SumTransformer().visit(syntax_tree)
         syntax_tree = ast.fix_missing_locations(syntax_tree)
 
-        module_dir = pathlib.Path("plugins/modules")
+        module_dir = target_dir / "plugins" / "modules"
         module_dir.mkdir(exist_ok=True)
         module_py_file = module_dir / "{name}.py".format(name=self.name)
         with module_py_file.open("w") as fd:
@@ -668,6 +668,7 @@ class SwaggerFile:
 
 
 def main():
+    target_dir = pathlib.Path("vmware_rest")
     module_list = []
     p = pathlib.Path("7.0.0")
     for json_file in p.glob("*.json"):
@@ -688,16 +689,16 @@ def main():
                     resource, definitions=swagger_file.definitions
                 )
                 if len(module.default_operationIds) > 0:
-                    module.renderer()
+                    module.renderer(target_dir=target_dir)
                     module_list.append(module.name)
             module = AnsibleModule(resource, definitions=swagger_file.definitions)
             if len(module.default_operationIds) > 0:
-                module.renderer()
+                module.renderer(target_dir=target_dir)
                 module_list.append(module.name)
 
     print("Updating the galaxy.yml file...")
     yaml = YAML()
-    my_galaxy = pathlib.Path(".") / "galaxy.yml"
+    my_galaxy = target_dir / "galaxy.yml"
     galaxy_contents = yaml.load(my_galaxy.open("r"))
     galaxy_contents["build_ignore"] = []
     for m in module_list:
