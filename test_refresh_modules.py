@@ -17,7 +17,7 @@ my_parameters = [
         "name": "ccc",
         "type": "list",
         "description": "3rd parameter is enum",
-        "enum": ["a", "b", "c"],
+        "enum": ["a", "c", "b"],
     },
 ]
 

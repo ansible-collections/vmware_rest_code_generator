@@ -65,7 +65,7 @@ def gen_documentation(name, description, parameters):
         option["description"] = normalize_description(description)
         option["type"] = python_type(option["type"])
         if "enum" in parameter:
-            option["choices"] = parameter["enum"]
+            option["choices"] = sorted(parameter["enum"])
 
         documentation["options"][parameter["name"]] = option
     return documentation
@@ -108,8 +108,7 @@ def gen_arguments_py(parameters, list_index=None):
 
     ARGUMENT_TPL = """argument_spec['{name}'] = {{}}"""
 
-    sorted_parameters = sorted(parameters, key=lambda item: item["name"])
-    for parameter in sorted_parameters:
+    for parameter in parameters:
         assign = ast.parse(ARGUMENT_TPL.format(name=parameter["name"])).body[0]
 
         # if None and list_index:
@@ -216,7 +215,7 @@ class AnsibleModuleBase:
             "enum": list(self.default_operationIds),
         }
 
-        return results.values()
+        return sorted(results.values(), key=lambda item: item["name"])
 
     def gen_url_func(self):
         first_operation = list(self.resource.operations.values())[0]
@@ -640,17 +639,11 @@ class SwaggerFile:
             json_content = json.load(fd)
             self.definitions = Definitions(json_content["definitions"])
             self.paths = self.load_paths(json_content["paths"])
-        from pprint import pprint
-
-        pprint(self.definitions)
-        pprint(self.paths)
 
     @staticmethod
     def load_paths(paths):
         result = {}
-        from pprint import pprint
 
-        pprint(result)
         for path in [Path(p, v) for p, v in paths.items()]:
             if path not in paths:
                 result[path.path] = path
@@ -732,7 +725,6 @@ def main():
         for m in filter_out_trusted_modules(module_list)
     ]
     galaxy_contents["build_ignore"] = paths_of_untrusted_modules
-    print(galaxy_contents)
     with my_galaxy.open("w") as fd:
         yaml.dump(galaxy_contents, fd)
 
