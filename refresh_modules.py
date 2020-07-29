@@ -140,6 +140,24 @@ def gen_arguments_py(parameters, list_index=None):
         yield assign
 
 
+def filter_out_trusted_modules(modules):
+    trusted_module_allowlist = [
+        "vcenter_vm.*",
+        "vcenter_folder_info",
+        "vcenter_cluster_info",
+        "vcenter_datacenter",
+        "vcenter_datacenter_info",
+        "vcenter_datastore_info",
+        "vcenter_network_info",
+    ]
+
+    regexes = [re.compile(i) for i in trusted_module_allowlist]
+    for m in modules:
+        if any([r.match(m) for r in regexes]):
+            continue
+        yield m
+
+
 class Resource:
     def __init__(self, name):
         self.name = name
@@ -706,24 +724,14 @@ def main():
                 module.renderer(target_dir=args.target_dir)
                 module_list.append(module.name)
 
-    print("Updating the galaxy.yml file...")
     yaml = YAML()
     my_galaxy = args.target_dir / "galaxy.yml"
     galaxy_contents = yaml.load(my_galaxy.open("r"))
-    galaxy_contents["build_ignore"] = []
-    for m in module_list:
-        if m.startswith("vcenter_vm"):
-            continue
-        if m in [
-            "vcenter_folder_info",
-            "vcenter_cluster_info",
-            "vcenter_datacenter",
-            "vcenter_datacenter_info",
-            "vcenter_datastore_info",
-            "vcenter_network_info",
-        ]:
-            continue
-        galaxy_contents["build_ignore"].append("plugins/modules/{}.py".format(m))
+    paths_of_untrusted_modules = [
+        "plugins/modules/{}.py".format(m)
+        for m in filter_out_trusted_modules(module_list)
+    ]
+    galaxy_contents["build_ignore"] = paths_of_untrusted_modules
     print(galaxy_contents)
     with my_galaxy.open("w") as fd:
         yaml.dump(galaxy_contents, fd)

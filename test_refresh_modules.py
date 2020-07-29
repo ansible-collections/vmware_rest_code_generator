@@ -101,3 +101,10 @@ def test_gen_arguments_py(monkeypatch):
             values=[[ast.Constant(value=True)], [ast.Constant(value="int")]],
         )
     )
+
+
+def test_filter_out_trusted_modules():
+    assert list(rm.filter_out_trusted_modules(["bla_vcenter_vm_a"])) == [
+        "bla_vcenter_vm_a"
+    ]
+    assert list(rm.filter_out_trusted_modules(["vcenter_vm_a"])) == []
