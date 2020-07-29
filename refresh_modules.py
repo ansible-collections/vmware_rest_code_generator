@@ -73,7 +73,7 @@ def gen_documentation(name, description, parameters):
 
 def path_to_name(path):
     def is_element(i):
-        if i and not "{" in i:
+        if i and "{" not in i:
             return True
         else:
             return False
@@ -170,7 +170,7 @@ class AnsibleModuleBase:
 
         results = {}
         for operationId in self.default_operationIds:
-            if not operationId in self.resource.operations:
+            if operationId not in self.resource.operations:
                 continue
             for parameter in itera(operationId):
                 name = parameter["name"]
@@ -634,7 +634,7 @@ class SwaggerFile:
 
         pprint(result)
         for path in [Path(p, v) for p, v in paths.items()]:
-            if not path in paths:
+            if path not in paths:
                 result[path.path] = path
             for verb, desc in path.value.items():
                 operationId = desc["operationId"]
@@ -650,7 +650,7 @@ class SwaggerFile:
         resources = {}
         for path in paths:
             name = path_to_name(path.path)
-            if not name in resources:
+            if name not in resources:
                 resources[name] = Resource(name)
                 resources[name].description = ""  # path.summary(verb)
 

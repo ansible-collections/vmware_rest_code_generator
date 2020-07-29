@@ -5,7 +5,7 @@ import types
 import refresh_modules as rm
 
 my_parameters = [
-    {"name": "aaa", "type": "boolean", "description": "a second parameter",},
+    {"name": "aaa", "type": "boolean", "description": "a second parameter"},
     {
         "name": "aaa",
         "type": "integer",
@@ -87,7 +87,7 @@ def test_gen_documentation():
 
 
 def test_gen_arguments_py(monkeypatch):
-    assert type(rm.gen_arguments_py([])) == types.GeneratorType
+    assert isinstance(rm.gen_arguments_py([]), types.GeneratorType)
     assert list(rm.gen_arguments_py([])) == []
     ret = rm.gen_arguments_py(my_parameters)
     assert ast.dump(ret.__next__().value) == ast.dump(
