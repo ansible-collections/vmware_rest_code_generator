@@ -247,10 +247,11 @@ class AnsibleModuleBase:
             if "$ref" in v:
                 ref = definitions.get(v)
                 if "properties" in ref:
-                    subkeys = AnsibleModule._property_to_parameter(
+                    unsorted_subkeys = AnsibleModule._property_to_parameter(
                         definitions.get(v), definitions
                     )
                     parameter["type"] = "dict"
+                    subkeys = sorted(unsorted_subkeys, key=lambda item: item["name"])
                     parameter["subkeys"] = list(subkeys)
                 else:
                     for k, v in ref.items():
