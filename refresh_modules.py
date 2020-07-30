@@ -9,8 +9,6 @@ import pathlib
 import astunparse
 from ruamel.yaml import YAML
 
-from pprint import pprint
-
 
 def normalize_description(string_list):
     def _transform(i):
@@ -169,6 +167,7 @@ class AnsibleModuleBase:
         self.definitions = definitions
         self.name = resource.name
         self.description = "Handle resource of type {name}".format(name=resource.name)
+        self.default_operationIds = None
 
     def list_index(self):
         return None
@@ -189,14 +188,42 @@ class AnsibleModuleBase:
         for operationId in self.default_operationIds:
             if operationId not in self.resource.operations:
                 continue
-            for parameter in itera(operationId):
+
+            for parameter in sorted(
+                itera(operationId),
+                key=lambda item: (item["name"], item.get("description")),
+            ):
                 name = parameter["name"]
                 if name not in results:
                     results[name] = parameter
                     results[name]["operationIds"] = []
+
+                # Merging two parameters, for instance "action" in
+                # /rest/vcenter/vm-template/library-items/{template_library_item}/check-outs
+                # and
+                # /rest/vcenter/vm-template/library-items/{template_library_item}/check-outs/{vm}
+                if "description" not in parameter:
+                    pass
+                elif "description" not in results[name]:
+                    results[name]["description"] = parameter.get("description")
+                elif results[name]["description"] != parameter.get("description"):
+                    # We can hardly merge two description strings and
+                    # get magically something meaningful
+                    if len(parameter["description"]) > len(
+                        results[name]["description"]
+                    ):
+                        results[name]["description"] = parameter["description"]
+                if "enum" in parameter:
+                    results[name]["enum"] = list(
+                        set(results[name]["enum"] + parameter["enum"])
+                    )
+
                 results[name]["operationIds"].append(operationId)
+                results[name]["operationIds"].sort()
 
         for name, result in results.items():
+            if result.get("enum"):
+                result["enum"].sort()
             if result.get("required"):
                 if (
                     len(set(self.default_operationIds) - set(result["operationIds"]))
@@ -206,13 +233,13 @@ class AnsibleModuleBase:
                         list(set(result["operationIds"]))
                     )
                 del result["required"]
-                result["required_if"] = set(result["operationIds"])
+                result["required_if"] = sorted(set(result["operationIds"]))
 
         results["state"] = {
             "name": "state",
             "default": "present",
             "type": "str",
-            "enum": list(self.default_operationIds),
+            "enum": sorted(list(self.default_operationIds)),
         }
 
         return sorted(results.values(), key=lambda item: item["name"])
@@ -703,9 +730,6 @@ def main():
         resources = swagger_file.init_resources(swagger_file.paths.values())
 
         for resource in resources.values():
-            print(resource.name)
-            if resource.name == "appliance_networking":
-                continue
             if "get" in resource.operations or "list" in resource.operations:
                 module = AnsibleInfoModule(
                     resource, definitions=swagger_file.definitions
