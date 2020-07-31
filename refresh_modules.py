@@ -2,9 +2,10 @@
 
 import argparse
 import ast
+import collections
+import io
 import json
 import re
-import yaml
 import pathlib
 import astunparse
 from ruamel.yaml import YAML
@@ -35,7 +36,6 @@ def gen_documentation(name, description, parameters):
     documentation = {
         "author": ["Ansible VMware team"],
         "description": description,
-        "extends_documentation_fragment": [],
         "module": name,
         "notes": ["Tested on vSphere 7.0"],
         "options": {},
@@ -67,6 +67,37 @@ def gen_documentation(name, description, parameters):
 
         documentation["options"][parameter["name"]] = option
     return documentation
+
+
+def format_documentation(documentation):
+    import yaml
+
+    def _sanitize(input):
+        if isinstance(input, str):
+            return input.replace("':'", ":")
+        elif isinstance(input, list):
+            return [l.replace("':'", ":") for l in input]
+        elif isinstance(input, dict):
+            return {k: _sanitize(v) for k, v in input.items()}
+        elif isinstance(input, bool):
+            return input
+        else:
+            raise TypeError
+
+    keys = [
+        "module",
+        "short_description",
+        "description",
+        "options",
+        "author",
+        "version_added",
+        "requirements",
+    ]
+    final = "DOCUMENTATION = '''\n"
+    for i in keys:
+        final += yaml.dump({i: _sanitize(documentation[i])}, indent=2)
+    final += "'''"
+    return final
 
 
 def path_to_name(path):
@@ -214,16 +245,14 @@ class AnsibleModuleBase:
                     ):
                         results[name]["description"] = parameter["description"]
                 if "enum" in parameter:
-                    results[name]["enum"] = list(
-                        set(results[name]["enum"] + parameter["enum"])
-                    )
+                    results[name]["enum"] += parameter["enum"]
 
                 results[name]["operationIds"].append(operationId)
                 results[name]["operationIds"].sort()
 
         for name, result in results.items():
             if result.get("enum"):
-                result["enum"].sort()
+                result["enum"] = sorted(set(result["enum"]))
             if result.get("required"):
                 if (
                     len(set(self.default_operationIds) - set(result["operationIds"]))
@@ -414,7 +443,7 @@ if __name__ == '__main__':
 """
         syntax_tree = ast.parse(DEFAULT_MODULE.format(name=self.name))
         arguments = gen_arguments_py(self.parameters(), self.list_index())
-        documentation = yaml.dump(
+        documentation = format_documentation(
             gen_documentation(self.name, self.description, self.parameters())
         )
         url_func = self.gen_url_func()
@@ -448,8 +477,8 @@ if __name__ == '__main__':
             def visit_Assign(self, node):
                 if not isinstance(node.targets[0], ast.Name):
                     pass
-                elif node.targets[0].id == "DOCUMENTATION":
-                    node.value = ast.Str(documentation)
+                # elif node.targets[0].id == "DOCUMENTATION":
+                #     node.value = documentation
                 elif node.targets[0].id == "IN_QUERY_PARAMETER":
                     node.value = ast.Str(in_query_parameters)
                 return node
@@ -461,7 +490,12 @@ if __name__ == '__main__':
         module_dir.mkdir(parents=True, exist_ok=True)
         module_py_file = module_dir / "{name}.py".format(name=self.name)
         with module_py_file.open("w") as fd:
-            fd.write(astunparse.unparse(syntax_tree))
+            for l in astunparse.unparse(syntax_tree).split("\n"):
+                if l.startswith("DOCUMENTATION ="):
+                    fd.write(documentation)
+                else:
+                    fd.write(l)
+                fd.write("\n")
 
 
 class AnsibleModule(AnsibleModuleBase):
@@ -638,7 +672,8 @@ class Definitions:
         self.definitions = data
 
     # e.g: #/definitions/com.vmware.vcenter.inventory.datastore_find
-    def _ref_to_dotted(self, ref):
+    @staticmethod
+    def _ref_to_dotted(ref):
         return ref["$ref"].split("/")[2]
 
     def get(self, ref):

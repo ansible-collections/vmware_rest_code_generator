@@ -21,6 +21,33 @@ my_parameters = [
     },
 ]
 
+
+documentation_data_expectation = {
+    "author": ["Ansible VMware team"],
+    "description": "bar",
+    "module": "foo",
+    "notes": ["Tested on vSphere 7.0"],
+    "options": {
+        "aaa": {
+            "description": [
+                "a second parameter",
+                "Validate attributes are:",
+                " - C(a_subkey) (ccc): more blabla",
+            ],
+            "required": True,
+            "type": "int",
+        },
+        "ccc": {
+            "choices": ["a", "b", "c"],
+            "description": ["3rd parameter is enum"],
+            "type": "list",
+        },
+    },
+    "requirements": ["python >= 3.6"],
+    "short_description": "bar",
+    "version_added": "1.0.0",
+}
+
 my_raw_paths_data = {
     "/rest/vcenter/vm/{vm}": {
         "get": {
@@ -282,32 +309,65 @@ def test_path_to_name():
 
 def test_gen_documentation():
 
-    assert rm.gen_documentation("foo", "bar", my_parameters) == {
-        "author": ["Ansible VMware team"],
-        "description": "bar",
-        "extends_documentation_fragment": [],
-        "module": "foo",
-        "notes": ["Tested on vSphere 7.0"],
-        "options": {
-            "aaa": {
-                "description": [
-                    "a second parameter",
-                    "Validate attributes are:",
-                    " - C(a_subkey) (ccc): more blabla",
-                ],
-                "required": True,
-                "type": "int",
-            },
-            "ccc": {
-                "choices": ["a", "b", "c"],
-                "description": ["3rd parameter is enum"],
-                "type": "list",
-            },
-        },
-        "requirements": ["python >= 3.6"],
-        "short_description": "bar",
-        "version_added": "1.0.0",
+    assert (
+        rm.gen_documentation("foo", "bar", my_parameters)
+        == documentation_data_expectation
+    )
+
+
+def test_format_documentation():
+
+    expectation = """DOCUMENTATION = \'\'\'
+module: foo
+short_description: bar
+description: bar
+options:
+  aaa:
+    description:
+    - a second parameter
+    - 'Validate attributes are:'
+    - ' - C(a_subkey) (ccc): more blabla'
+    required: true
+    type: int
+  ccc:
+    choices:
+    - a
+    - b
+    - c
+    description:
+    - 3rd parameter is enum
+    type: list
+author:
+- Ansible VMware team
+version_added: 1.0.0
+requirements:
+- python >= 3.6
+\'\'\'"""
+
+    assert rm.format_documentation(documentation_data_expectation) == expectation
+
+
+def test_format_documentation_quote():
+    documentation = {
+        "module": "a",
+        "short_description": "a",
+        "description": "':'",
+        "options": "a",
+        "author": "a",
+        "version_added": "a",
+        "requirements": "a",
     }
+    expectation = """DOCUMENTATION = \'\'\'
+module: a
+short_description: a
+description: ':'
+options: a
+author: a
+version_added: a
+requirements: a
+\'\'\'"""
+
+    assert rm.format_documentation(documentation) == expectation
 
 
 def test_gen_arguments_py(monkeypatch):
@@ -390,6 +450,12 @@ def test_SwaggerFile_init_resources():
     }
 
 
+def test_Definitions__ref_to_dotted():
+    ref = {"$ref": "#/definitions/vapi.std.errors.resource_inaccessible_error"}
+    dotted = "vapi.std.errors.resource_inaccessible_error"
+    assert rm.Definitions._ref_to_dotted(ref) == dotted
+
+
 # AnsibleModuleBase
 def test_AnsibleModuleBase():
     paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
@@ -437,31 +503,6 @@ def test_AnsibleModule_parameters():
     assert module.parameters() == [
         {"default": "present", "enum": [], "name": "state", "type": "str"}
     ]
-
-
-def test_gen_documentation():
-    paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
-    resources = rm.SwaggerFile.init_resources(paths.values())
-    definitions = rm.Definitions(my_definitions)
-    module = rm.AnsibleInfoModule(resources["vcenter_vm"], definitions)
-    doc = rm.gen_documentation("vcenter_vm", module.description, module.parameters())
-    assert doc == {
-        "author": ["Ansible VMware team"],
-        "description": "Handle resource of type vcenter_vm",
-        "extends_documentation_fragment": [],
-        "module": "vcenter_vm",
-        "notes": ["Tested on vSphere 7.0"],
-        "options": {
-            "filter.vms": {"description": ["desc of multi"], "type": "list"},
-            "vm": {
-                "description": ["Id of the VM Required with " "I(state=['get'])"],
-                "type": "str",
-            },
-        },
-        "requirements": ["python >= 3.6"],
-        "short_description": "Handle resource of type vcenter_vm",
-        "version_added": "1.0.0",
-    }
 
 
 # AnsibleModule - with complex URL
