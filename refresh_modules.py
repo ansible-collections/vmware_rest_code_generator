@@ -13,12 +13,25 @@ from ruamel.yaml import YAML
 
 
 def normalize_description(string_list):
-    def _transform(i):
-        i = i.replace(" {@term enumerated type}", "")
-        i = re.sub(r"{@name DayOfWeek}", "day of the week", i)
-        return i
+    def _transform(my_list):
+        for i in my_list:
+            if not i:
+                continue
+            i = i.replace(" {@term enumerated type}", "")
+            i = re.sub(r"{@name DayOfWeek}", "day of the week", i)
+            yield i
 
-    return [_transform(i) for i in string_list]
+    if not isinstance(string_list, list):
+        raise TypeError
+
+    with_no_line_break = []
+    for l in string_list:
+        if "\n" in l:
+            with_no_line_break += l.split("\n")
+        else:
+            with_no_line_break.append(l)
+
+    return list(_transform(with_no_line_break))
 
 
 def python_type(value):
@@ -61,7 +74,7 @@ def gen_documentation(name, description, parameters):
                 description.append(
                     " - C({name}) ({type}): {description}".format(**subkey)
                 )
-        option["description"] = normalize_description(description)
+        option["description"] = list(normalize_description(description))
         option["type"] = python_type(option["type"])
         if "enum" in parameter:
             option["choices"] = sorted(parameter["enum"])

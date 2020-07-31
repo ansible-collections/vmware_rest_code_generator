@@ -16,7 +16,7 @@ my_parameters = [
     {
         "name": "ccc",
         "type": "list",
-        "description": "3rd parameter is enum",
+        "description": "3rd parameter is ':' enum,\n\nand this string is long and comes with a ' on purpose. This way, we can use it to ensure format_documentation() can break it up.",
         "enum": ["a", "c", "b"],
     },
 ]
@@ -39,7 +39,13 @@ documentation_data_expectation = {
         },
         "ccc": {
             "choices": ["a", "b", "c"],
-            "description": ["3rd parameter is enum"],
+            "description": [
+                "3rd parameter is ':' enum,",
+                "and this string is long and comes with a "
+                "' on purpose. This way, we can use it to "
+                "ensure format_documentation() can break "
+                "it up.",
+            ],
             "type": "list",
         },
     },
@@ -335,7 +341,9 @@ options:
     - b
     - c
     description:
-    - 3rd parameter is enum
+    - '3rd parameter is : enum,'
+    - and this string is long and comes with a ' on purpose. This way, we can use
+      it to ensure format_documentation() can break it up.
     type: list
 author:
 - Ansible VMware team
