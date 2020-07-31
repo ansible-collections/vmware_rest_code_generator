@@ -273,7 +273,7 @@ class AnsibleModuleBase:
                     > 0
                 ):
                     result["description"] += " Required with I(state={})".format(
-                        list(set(result["operationIds"]))
+                        sorted(set(result["operationIds"]))
                     )
                 del result["required"]
                 result["required_if"] = sorted(set(result["operationIds"]))
