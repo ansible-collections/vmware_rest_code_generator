@@ -773,9 +773,35 @@ def main():
         "plugins/modules/{}.py".format(m)
         for m in filter_out_trusted_modules(module_list)
     ]
+
     galaxy_contents["build_ignore"] = paths_of_untrusted_modules
     with my_galaxy.open("w") as fd:
         yaml.dump(galaxy_contents, fd)
+
+    ignore_file = args.target_dir / "tests" / "sanity" / "ignore-2.10.txt"
+    files = ["plugins/modules/{}.py".format(module) for module in module_list] + [
+        "plugins/doc_fragments/vmware_rest_client.py",
+        "plugins/module_modules/vmware_rest.py",
+    ]
+    with ignore_file.open("w") as fd:
+        for f in files:
+            for test in [
+                "compile-2.6",  # Py3.6+
+                "compile-2.7",  # Py3.6+
+                "compile-3.5",  # Py3.6+
+                "future-import-boilerplate",  # Py2 only
+                "metaclass-boilerplate",  # Py2 only
+                "pep8",
+                "pylint",
+                "validate-modules",
+            ]:
+                fd.write("{f} {test}!skip\n".format(f=f, test=test))
+
+    galaxy_contents = yaml.load(my_galaxy.open("r"))
+    paths_of_untrusted_modules = [
+        "plugins/modules/{}.py".format(m)
+        for m in filter_out_trusted_modules(module_list)
+    ]
 
 
 if __name__ == "__main__":
