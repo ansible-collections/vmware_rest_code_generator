@@ -323,7 +323,7 @@ def test_gen_documentation():
 
 def test_format_documentation():
 
-    expectation = """DOCUMENTATION = \'\'\'
+    expectation = """\'\'\'
 module: foo
 short_description: bar
 description: bar
@@ -365,7 +365,7 @@ def test_format_documentation_quote():
         "version_added": "a",
         "requirements": "a",
     }
-    expectation = """DOCUMENTATION = \'\'\'
+    expectation = """\'\'\'
 module: a
 short_description: a
 description: ':'
@@ -379,19 +379,14 @@ requirements: a
 
 
 def test_gen_arguments_py(monkeypatch):
-    assert isinstance(rm.gen_arguments_py([]), types.GeneratorType)
-    assert list(rm.gen_arguments_py([])) == []
+    assert isinstance(rm.gen_arguments_py([]), str)
     ret = rm.gen_arguments_py(my_parameters)
-    assert ast.dump(ret.__next__().value) == ast.dump(
-        ast.Dict(
-            keys=[[ast.Constant(value="type")]], values=[[ast.Constant(value="bool")]]
-        )
-    )
-    assert ast.dump(ret.__next__().value) == ast.dump(
-        ast.Dict(
-            keys=[[ast.Constant(value="required")], [ast.Constant(value="type")]],
-            values=[[ast.Constant(value=True)], [ast.Constant(value="int")]],
-        )
+    assert (
+        ret
+        == """
+argument_spec['aaa'] = {'type': 'bool'}
+argument_spec['aaa'] = {'required': True, 'type': 'int'}
+argument_spec['ccc'] = {'type': 'list', 'choices': ['a', 'b', 'c']}"""
     )
 
 
