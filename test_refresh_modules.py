@@ -323,7 +323,7 @@ def test_gen_documentation():
 
 def test_format_documentation():
 
-    expectation = """DOCUMENTATION = \'\'\'
+    expectation = """\'\'\'
 module: foo
 short_description: bar
 description: bar
@@ -365,7 +365,7 @@ def test_format_documentation_quote():
         "version_added": "a",
         "requirements": "a",
     }
-    expectation = """DOCUMENTATION = \'\'\'
+    expectation = """\'\'\'
 module: a
 short_description: a
 description: ':'

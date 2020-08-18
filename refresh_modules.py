@@ -107,7 +107,7 @@ def format_documentation(documentation):
         "version_added",
         "requirements",
     ]
-    final = "DOCUMENTATION = '''\n"
+    final = "'''\n"
     for i in keys:
         final += yaml.dump({i: _sanitize(documentation[i])}, indent=2)
     final += "'''"
@@ -151,6 +151,7 @@ def gen_arguments_py(parameters, list_index=None):
 
     ARGUMENT_TPL = """argument_spec['{name}'] = {{}}"""
 
+    result = ""
     for parameter in parameters:
         assign = ast.parse(ARGUMENT_TPL.format(name=parameter["name"])).body[0]
 
@@ -179,7 +180,8 @@ def gen_arguments_py(parameters, list_index=None):
         if "operationIds" in parameter:
             _add_key(assign, "operationIds", sorted(parameter["operationIds"]))
 
-        yield assign
+        result += astunparse.unparse(assign).rstrip("\n")
+    return result
 
 
 def filter_out_trusted_modules(modules):
@@ -198,6 +200,15 @@ def filter_out_trusted_modules(modules):
         if any([r.match(m) for r in regexes]):
             continue
         yield m
+
+
+def _indent(text_block, indent=0):
+    result = ""
+    for l in text_block.split("\n"):
+        result += " " * indent
+        result += l
+        result += "\n"
+    return result
 
 
 class Resource:
@@ -294,8 +305,7 @@ class AnsibleModuleBase:
         if not path.startswith("/rest"):  # Pre 7.0.0
             path = "/rest" + path
 
-        url_func = ast.parse(self.URL.format(path=path)).body[0]
-        return url_func
+        return self.URL.format(path=path)
 
     @staticmethod
     def _property_to_parameter(prop_struct, definitions):
@@ -342,24 +352,19 @@ class AnsibleModuleBase:
     def in_query_parameters(self):
         return [p["name"] for p in self.parameters() if p.get("in") == "query"]
 
-    def gen_main_func(self):
-        raise NotImplementedError()
-
     def renderer(self, target_dir):
-        # syntax_tree = ast.parse(MODULE_TEMPLATE)
         DEFAULT_MODULE = """
-#!/usr/bin/env python
-# Info module template
-from __future__ import absolute_import, division, print_function
-__metaclass__ = type
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+# Copyright: Ansible Project
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
+DOCUMENTATION = {documentation}
+
+IN_QUERY_PARAMETER = {in_query_parameters}
+
 import socket
 import json
-
-DOCUMENTATION = ""
-
-IN_QUERY_PARAMETER = None
-
-
 from ansible.module_utils.basic import env_fallback
 try:
     from ansible_module.turbo.module import AnsibleTurboModule as AnsibleModule
@@ -398,9 +403,7 @@ def prepare_argument_spec():
         )
     }}
 
-
-
-
+    {arguments}
     return argument_spec
 
 async def get_device_info(params, session, _url, _key):
@@ -444,10 +447,9 @@ async def main( ):
     module.exit_json(**result)
 
 def url(params):
-    pass
+{url_func}
 
-def entry_point():
-    pass
+{entry_point_func}
 
 if __name__ == '__main__':
     import asyncio
@@ -455,61 +457,30 @@ if __name__ == '__main__':
     loop.run_until_complete(main())
 
 """
-        syntax_tree = ast.parse(DEFAULT_MODULE.format(name=self.name))
         arguments = gen_arguments_py(self.parameters(), self.list_index())
         documentation = format_documentation(
             gen_documentation(self.name, self.description, self.parameters())
         )
         url_func = self.gen_url_func()
-        # main_func = self.gen_main_func()
         entry_point_func = self.gen_entry_point_func()
 
         in_query_parameters = self.in_query_parameters()
 
-        class SumTransformer(ast.NodeTransformer):
-            def visit_FunctionDef(self, node):
 
-                return node
-
-            def visit_Assign(self, node):
-
-                if node.targets[0].id == "IN_QUERY_PARAMETER":
-                    node.value = ast.Str(in_query_parameters)
-
-                return node
-
-            def visit_FunctionDef(self, node):
-                if node.name == "url":
-                    node.body[0] = url_func
-                elif node.name == "entry_point":
-                    node = entry_point_func
-                elif node.name == "prepare_argument_spec":
-                    for arg in arguments:
-                        node.body.insert(1, arg)
-                return node
-
-            def visit_Assign(self, node):
-                if not isinstance(node.targets[0], ast.Name):
-                    pass
-                # elif node.targets[0].id == "DOCUMENTATION":
-                #     node.value = documentation
-                elif node.targets[0].id == "IN_QUERY_PARAMETER":
-                    node.value = ast.Str(in_query_parameters)
-                return node
-
-        syntax_tree = SumTransformer().visit(syntax_tree)
-        syntax_tree = ast.fix_missing_locations(syntax_tree)
+        module_content = DEFAULT_MODULE.format(
+            name=self.name,
+            documentation=documentation,
+            in_query_parameters=in_query_parameters,
+            url_func=_indent(url_func, 4),
+            entry_point_func=_indent(entry_point_func, 0),
+            arguments=_indent(arguments, 4),
+        )
 
         module_dir = target_dir / "plugins" / "modules"
         module_dir.mkdir(parents=True, exist_ok=True)
         module_py_file = module_dir / "{name}.py".format(name=self.name)
         with module_py_file.open("w") as fd:
-            for l in astunparse.unparse(syntax_tree).split("\n"):
-                if l.startswith("DOCUMENTATION ="):
-                    fd.write(documentation)
-                else:
-                    fd.write(l)
-                fd.write("\n")
+            fd.write(module_content)
 
 
 class AnsibleModule(AnsibleModuleBase):
@@ -578,7 +549,7 @@ async def _{operation}(params, session):
             _json = {{}}
         # Update the value field with all the details
         if "{operation}" == "create" and (resp.status in [200, 201]) and "value" in _json:
-            if type(_json["value"]) == dict:
+            if isinstance(_json["value"], dict):
                 _id = list(_json["value"].values())[0]
             else:
                 _id = _json["value"]
@@ -609,7 +580,7 @@ async def _{operation}(params, session):
 
             main_func.body.append(func)
 
-        return main_func.body
+        return astunparse.unparse(main_func.body)
 
 
 class AnsibleInfoModule(AnsibleModuleBase):
@@ -659,16 +630,13 @@ return "https://{{vcenter_hostname}}{path}".format(**params) + gen_args(params, 
             list_path = "/rest" + list_path
 
         if not path:
-            url_func = ast.parse(self.URL_LIST_ONLY.format(list_path=list_path)).body[0]
+            return self.URL_LIST_ONLY.format(list_path=list_path)
         elif list_path and path.endswith("}"):
-            url_func = ast.parse(
-                self.URL_WITH_LIST.format(
-                    path=path, list_path=list_path, list_index=self.list_index(),
-                )
-            ).body[0]
+            return self.URL_WITH_LIST.format(
+                path=path, list_path=list_path, list_index=self.list_index(),
+            )
         else:
-            url_func = ast.parse(self.URL.format(path=path)).body[0]
-        return url_func
+            return self.URL.format(path=path)
 
     def gen_entry_point_func(self):
         FUNC = """
@@ -677,7 +645,7 @@ async def entry_point(module, session):
         _json = await resp.json()
         return await update_changed_flag(_json, resp.status, "get")
 """
-        return ast.parse(FUNC.format(name=self.name)).body[0]
+        return FUNC.format(name=self.name)
 
 
 class Definitions:
