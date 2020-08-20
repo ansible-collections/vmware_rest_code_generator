@@ -398,7 +398,6 @@ def prepare_argument_spec():
         "vcenter_certs": dict(
             type='bool',
             required=False,
-            no_log=True,
             fallback=(env_fallback, ['VMWARE_VALIDATE_CERTS']),
         )
     }}
