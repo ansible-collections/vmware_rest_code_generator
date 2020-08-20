@@ -787,10 +787,7 @@ def main():
         yaml.dump(galaxy_contents, fd)
 
     ignore_file = args.target_dir / "tests" / "sanity" / "ignore-2.10.txt"
-    files = ["plugins/modules/{}.py".format(module) for module in module_list] + [
-        "plugins/doc_fragments/vmware_rest_client.py",
-        "plugins/module_modules/vmware_rest.py",
-    ]
+    files = ["plugins/modules/{}.py".format(module) for module in module_list]
     with ignore_file.open("w") as fd:
         for f in files:
             for test in [
