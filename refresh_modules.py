@@ -484,7 +484,9 @@ if __name__ == '__main__':
 class AnsibleModule(AnsibleModuleBase):
 
     URL = """
-return "https://{{vcenter_hostname}}{path}".format(**params)
+return (
+    "https://{{vcenter_hostname}}"
+    "{path}").format(**params)
 """
 
     def __init__(self, resource, definitions):
@@ -516,7 +518,9 @@ async def entry_point(module, session):
 
             FUNC_NO_DATA_TPL = """
 async def _{operation}(params, session):
-    _url = "https://{{vcenter_hostname}}{path}".format(**params) + gen_args(params, IN_QUERY_PARAMETER)
+    _url = (
+        "https://{{vcenter_hostname}}"
+        "{path}").format(**params) + gen_args(params, IN_QUERY_PARAMETER)
     async with session.{verb}(_url) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
@@ -538,7 +542,9 @@ async def _{operation}(params, session):
     for i in accepted_fields:
         if params[i]:
             spec[i] = params[i]
-    _url = "https://{{vcenter_hostname}}{path}".format(**params)
+    _url = (
+        "https://{{vcenter_hostname}}"
+        "{path}").format(**params)
     async with session.{verb}(_url, json={{'spec': spec}}) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
@@ -585,17 +591,25 @@ class AnsibleInfoModule(AnsibleModuleBase):
 
     URL_WITH_LIST = """
 if params['{list_index}']:
-    return "https://{{vcenter_hostname}}{path}".format(**params) + gen_args(params, IN_QUERY_PARAMETER)
+    return (
+        "https://{{vcenter_hostname}}"
+        "{path}").format(**params) + gen_args(params, IN_QUERY_PARAMETER)
 else:
-    return "https://{{vcenter_hostname}}{list_path}".format(**params) + gen_args(params, IN_QUERY_PARAMETER)
+    return (
+        "https://{{vcenter_hostname}}"
+        "{list_path}").format(**params) + gen_args(params, IN_QUERY_PARAMETER)
 """
 
     URL_LIST_ONLY = """
-return "https://{{vcenter_hostname}}{list_path}".format(**params) + gen_args(params, IN_QUERY_PARAMETER)
+return (
+    "https://{{vcenter_hostname}}"
+    "{list_path}").format(**params) + gen_args(params, IN_QUERY_PARAMETER)
 """
 
     URL = """
-return "https://{{vcenter_hostname}}{path}".format(**params) + gen_args(params, IN_QUERY_PARAMETER)
+return (
+    "https://{{vcenter_hostname}}"
+    "{path}").format(**params) + gen_args(params, IN_QUERY_PARAMETER)
 """
 
     def __init__(self, resource, definitions):
@@ -753,6 +767,8 @@ def main():
         resources = swagger_file.init_resources(swagger_file.paths.values())
 
         for resource in resources.values():
+            if resource.name.startswith("vcenter_trustedinfrastructure"):
+                continue
             if "get" in resource.operations or "list" in resource.operations:
                 module = AnsibleInfoModule(
                     resource, definitions=swagger_file.definitions
@@ -795,7 +811,6 @@ def main():
                 "compile-3.5",  # Py3.6+
                 "future-import-boilerplate",  # Py2 only
                 "metaclass-boilerplate",  # Py2 only
-                "pep8",
                 "pylint",
                 "validate-modules",
             ]:
