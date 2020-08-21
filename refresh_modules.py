@@ -532,11 +532,29 @@ async def _{operation}(params, session):
             FUNC_WITH_DATA_TPL = """
 async def _{operation}(params, session):
     accepted_fields = []
+    spec = {{}}
+    for i in accepted_fields:
+        if params[i]:
+            spec[i] = params[i]
+    _url = (
+        "https://{{vcenter_hostname}}"
+        "{path}").format(**params)
+    async with session.{verb}(_url, json={{'spec': spec}}) as resp:
+        try:
+            if resp.headers["Content-Type"] == "application/json":
+                _json = await resp.json()
+        except KeyError:
+            _json = {{}}
+        return await update_changed_flag(_json, resp.status, "{operation}")
+"""
 
-    if "{operation}" == "create":
-        _exists = await exists(params, session)
-        if _exists:
-            return (await update_changed_flag({{"value": _exists}}, 200, 'get'))
+            FUNC_WITH_DATA_CREATE_TPL = """
+async def _{operation}(params, session):
+    accepted_fields = []
+
+    _exists = await exists(params, session)
+    if _exists:
+        return (await update_changed_flag({{"value": _exists}}, 200, 'get'))
 
     spec = {{}}
     for i in accepted_fields:
@@ -552,7 +570,7 @@ async def _{operation}(params, session):
         except KeyError:
             _json = {{}}
         # Update the value field with all the details
-        if "{operation}" == "create" and (resp.status in [200, 201]) and "value" in _json:
+        if (resp.status in [200, 201]) and "value" in _json:
             if isinstance(_json["value"], dict):
                 _id = list(_json["value"].values())[0]
             else:
@@ -570,8 +588,13 @@ async def _{operation}(params, session):
                             data_accepted_fields.append(p["name"])
 
             if data_accepted_fields:
+                template = (
+                    FUNC_WITH_DATA_CREATE_TPL
+                    if operation == "create"
+                    else FUNC_WITH_DATA_TPL
+                )
                 func = ast.parse(
-                    FUNC_WITH_DATA_TPL.format(operation=operation, verb=verb, path=path)
+                    template.format(operation=operation, verb=verb, path=path)
                 ).body[0]
                 func.body[0].value.elts = [
                     ast.Constant(value=i, kind=None)
@@ -811,7 +834,6 @@ def main():
                 "compile-3.5",  # Py3.6+
                 "future-import-boilerplate",  # Py2 only
                 "metaclass-boilerplate",  # Py2 only
-                "pylint",
                 "validate-modules",
             ]:
                 fd.write("{f} {test}!skip\n".format(f=f, test=test))
