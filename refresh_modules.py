@@ -868,7 +868,9 @@ def main():
     with my_galaxy.open("w") as fd:
         yaml.dump(galaxy_contents, fd)
 
-    ignore_file = args.target_dir / "tests" / "sanity" / "ignore-2.10.txt"
+    ignore_dir = args.target_dir / "tests" / "sanity"
+    ignore_dir.mkdir(parents=True, exist_ok=True)
+    ignore_file = ignore_dir / "ignore-2.10.txt"
     files = ["plugins/modules/{}.py".format(module) for module in module_list]
     with ignore_file.open("w") as fd:
         for f in files:
