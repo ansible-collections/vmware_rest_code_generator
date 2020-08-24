@@ -875,14 +875,15 @@ def main():
     with ignore_file.open("w") as fd:
         for f in files:
             for test in [
-                "compile-2.6",  # Py3.6+
-                "compile-2.7",  # Py3.6+
-                "compile-3.5",  # Py3.6+
-                "future-import-boilerplate",  # Py2 only
-                "metaclass-boilerplate",  # Py2 only
-                "validate-modules",
+                "compile-2.6!skip",  # Py3.6+
+                "compile-2.7!skip",  # Py3.6+
+                "compile-3.5!skip",  # Py3.6+
+                "future-import-boilerplate!skip",  # Py2 only
+                "metaclass-boilerplate!skip",  # Py2 only
+                "validate-modules:missing-if-name-main",
+                "validate-modules:missing-main-call",  # there is an async main()
             ]:
-                fd.write("{f} {test}!skip\n".format(f=f, test=test))
+                fd.write("{f} {test}\n".format(f=f, test=test))
 
     galaxy_contents = yaml.load(my_galaxy.open("r"))
     paths_of_untrusted_modules = [
