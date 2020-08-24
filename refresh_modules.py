@@ -48,12 +48,45 @@ def python_type(value):
 def gen_documentation(name, description, parameters):
 
     documentation = {
-        "author": ["Ansible VMware team"],
+        "author": ["Goneri Le Bouder (@goneri) <goneri@lebouder.net>"],
         "description": description,
         "module": name,
         "notes": ["Tested on vSphere 7.0"],
-        "options": {},
-        "requirements": ["python >= 3.6"],
+        "options": {
+            "vcenter_hostname": {
+                "description": [
+                    "The hostname or IP address of the vSphere vCenter",
+                    "If the value is not specified in the task, the value of environment variable C(VMWARE_HOST) will be used instead.",
+                ],
+                "type": "str",
+                "required": True,
+            },
+            "vcenter_username": {
+                "description": [
+                    "The vSphere vCenter username",
+                    "If the value is not specified in the task, the value of environment variable C(VMWARE_USER) will be used instead.",
+                ],
+                "type": "str",
+                "required": True,
+            },
+            "vcenter_password": {
+                "description": [
+                    "The vSphere vCenter username",
+                    "If the value is not specified in the task, the value of environment variable C(VMWARE_PASSWORD) will be used instead.",
+                ],
+                "type": "str",
+                "required": True,
+            },
+            "vcenter_validate_certs": {
+                "description": [
+                    "Allows connection when SSL certificates are not valid. Set to C(false) when certificates are not trusted.",
+                    "If the value is not specified in the task, the value of environment variable C(VMWARE_VALIDATE_CERTS) will be used instead.",
+                ],
+                "type": "bool",
+                "default": True,
+            },
+        },
+        "requirements": ["python >= 3.6", "aiohttp"],
         "short_description": description,
         "version_added": "1.0.0",
     }
@@ -177,9 +210,8 @@ def gen_arguments_py(parameters, list_index=None):
         if "enum" in parameter:
             _add_key(assign, "choices", sorted(parameter["enum"]))
 
-        if "operationIds" in parameter:
-            _add_key(assign, "operationIds", sorted(parameter["operationIds"]))
-
+        #        if "operationIds" in parameter:
+        #            _add_key(assign, "operationIds", sorted(parameter["operationIds"]))
         result += astunparse.unparse(assign).rstrip("\n")
     return result
 
@@ -381,23 +413,24 @@ def prepare_argument_spec():
     argument_spec = {{
         "vcenter_hostname": dict(
             type='str',
-            required=False,
+            required=True,
             fallback=(env_fallback, ['VMWARE_HOST']),
         ),
         "vcenter_username": dict(
             type='str',
-            required=False,
+            required=True,
             fallback=(env_fallback, ['VMWARE_USER']),
         ),
         "vcenter_password": dict(
             type='str',
-            required=False,
+            required=True,
             no_log=True,
             fallback=(env_fallback, ['VMWARE_PASSWORD']),
         ),
-        "vcenter_certs": dict(
+        "vcenter_validate_certs": dict(
             type='bool',
             required=False,
+            default=True,
             fallback=(env_fallback, ['VMWARE_VALIDATE_CERTS']),
         )
     }}
