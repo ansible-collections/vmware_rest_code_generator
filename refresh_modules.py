@@ -393,6 +393,9 @@ class AnsibleModuleBase:
 
 DOCUMENTATION = {documentation}
 
+EXAMPLES = \"\"\"
+\"\"\"
+
 IN_QUERY_PARAMETER = {in_query_parameters}
 
 import socket
