@@ -856,14 +856,6 @@ def main():
                 module.renderer(target_dir=args.target_dir)
                 module_list.append(module.name)
 
-    for module_path in [
-        "{target_dir}/plugins/modules/{module}.py".format(
-            target_dir=args.target_dir, module=m
-        )
-        for m in module_list
-    ]:
-        subprocess.check_call(["black", module_path])
-
     yaml = YAML()
     my_galaxy = args.target_dir / "galaxy.yml"
     galaxy_contents = yaml.load(my_galaxy.open("r"))
