@@ -816,16 +816,32 @@ def main():
 
     module_list = []
     p = pathlib.Path("7.0.0")
-    for json_file in p.glob("*.json"):
-        if str(json_file) == "7.0.0/appliance.json":
-            continue
-        if str(json_file) == "7.0.0/api.json":
-            continue
+    # for json_file in p.glob("*.json"):
+    #     if str(json_file) == "7.0.0/appliance.json":
+    #         continue
+    #     if str(json_file) == "7.0.0/api.json":
+    #         continue
+    for json_file in p.glob("vcenter.json"):
         print("Generating modules from {}".format(json_file))
         swagger_file = SwaggerFile(json_file)
         resources = swagger_file.init_resources(swagger_file.paths.values())
 
         for resource in resources.values():
+            if not (
+                resource.name.startswith("vcenter_vm_")
+                or resource.name
+                in [
+                    "vcenter_cluster",
+                    "vcenter_datacenter",
+                    "vcenter_datastore",
+                    "vcenter_folder",
+                    "vcenter_host",
+                    "vcenter_network",
+                    "vcenter_vm",
+                ]
+            ):
+                print(f"skipping resource {resource.name}")
+                continue
             if resource.name.startswith("vcenter_trustedinfrastructure"):
                 continue
             if "get" in resource.operations or "list" in resource.operations:
