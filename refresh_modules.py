@@ -196,7 +196,7 @@ def gen_arguments_py(parameters, list_index=None):
         #     parameter["name"] = list_index
 
         if parameter["name"] in ["user_name", "username", "password"]:
-            _add_key(assign, "nolog", True)
+            _add_key(assign, "no_log", True)
 
         if parameter.get("required"):
             if list_index == parameter["name"]:
