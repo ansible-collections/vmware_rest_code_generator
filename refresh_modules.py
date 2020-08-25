@@ -12,6 +12,12 @@ import astunparse
 from ruamel.yaml import YAML
 
 
+def normalize_parameter_name(name):
+    # the in-query filter.* parameters are not valid Python variable names.
+    # We replace the . with a _ to avoid proble,
+    return name.replace("filter.", "filter_")
+
+
 def normalize_description(string_list):
     def _transform(my_list):
         for i in my_list:
@@ -92,6 +98,7 @@ def gen_documentation(name, description, parameters):
     }
 
     for parameter in parameters:
+        normalized_name = normalize_parameter_name(parameter["name"])
         description = []
         option = {
             "type": parameter["type"],
@@ -114,7 +121,7 @@ def gen_documentation(name, description, parameters):
         if option["type"] == "list":
             option["elements"] = "str"
 
-        documentation["options"][parameter["name"]] = option
+        documentation["options"][normalized_name] = option
     return documentation
 
 
@@ -188,14 +195,15 @@ def gen_arguments_py(parameters, list_index=None):
 
     result = ""
     for parameter in parameters:
-        assign = ast.parse(ARGUMENT_TPL.format(name=parameter["name"])).body[0]
+        name = normalize_parameter_name(parameter["name"])
+        assign = ast.parse(ARGUMENT_TPL.format(name=name)).body[0]
 
         # if None and list_index:
         #     assign = ast.parse(ARGUMENT_TPL.format(name=list_index)).body[0]
         #     _add_key(assign, "aliases", [parameter["name"]])
         #     parameter["name"] = list_index
 
-        if parameter["name"] in ["user_name", "username", "password"]:
+        if name in ["user_name", "username", "password"]:
             _add_key(assign, "no_log", True)
 
         if parameter.get("required"):
@@ -205,7 +213,7 @@ def gen_arguments_py(parameters, list_index=None):
                 _add_key(assign, "required", True)
 
         # "bus" option defaulting on 0
-        if parameter["name"] == "bus":
+        if name == "bus":
             _add_key(assign, "default", 0)
 
         _add_key(assign, "type", python_type(parameter["type"]))
