@@ -111,6 +111,8 @@ def gen_documentation(name, description, parameters):
         option["type"] = python_type(option["type"])
         if "enum" in parameter:
             option["choices"] = sorted(parameter["enum"])
+        if option["type"] == "list":
+            option["elements"] = "str"
 
         documentation["options"][parameter["name"]] = option
     return documentation
@@ -209,6 +211,8 @@ def gen_arguments_py(parameters, list_index=None):
         _add_key(assign, "type", python_type(parameter["type"]))
         if "enum" in parameter:
             _add_key(assign, "choices", sorted(parameter["enum"]))
+        if python_type(parameter["type"]) == "list":
+            _add_key(assign, "elements", "str")
 
         #        if "operationIds" in parameter:
         #            _add_key(assign, "operationIds", sorted(parameter["operationIds"]))
@@ -638,7 +642,11 @@ async def _{operation}(params, session):
                 ]
             else:
                 func = ast.parse(
-                    FUNC_NO_DATA_TPL.format(operation=operation, verb=verb, path=path,)
+                    FUNC_NO_DATA_TPL.format(
+                        operation=operation,
+                        verb=verb,
+                        path=path,
+                    )
                 ).body[0]
 
             main_func.body.append(func)
@@ -704,7 +712,9 @@ return (
             return self.URL_LIST_ONLY.format(list_path=list_path)
         elif list_path and path.endswith("}"):
             return self.URL_WITH_LIST.format(
-                path=path, list_path=list_path, list_index=self.list_index(),
+                path=path,
+                list_path=list_path,
+                list_index=self.list_index(),
             )
         else:
             return self.URL.format(path=path)
