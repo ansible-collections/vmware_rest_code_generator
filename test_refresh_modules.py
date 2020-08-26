@@ -23,7 +23,7 @@ my_parameters = [
 
 
 documentation_data_expectation = {
-    "author": ["Ansible VMware team"],
+    "author": ["Goneri Le Bouder (@goneri) <goneri@lebouder.net>"],
     "description": "bar",
     "module": "foo",
     "notes": ["Tested on vSphere 7.0"],
@@ -46,10 +46,66 @@ documentation_data_expectation = {
                 "ensure format_documentation() can break "
                 "it up.",
             ],
+            "elements": "str",
             "type": "list",
         },
+        "vcenter_hostname": {
+            "description": [
+                "The hostname or IP address " "of the vSphere vCenter",
+                "If the value is not "
+                "specified in the task, the "
+                "value of environment "
+                "variable C(VMWARE_HOST) "
+                "will be used instead.",
+            ],
+            "required": True,
+            "type": "str",
+        },
+        "vcenter_password": {
+            "description": [
+                "The vSphere vCenter " "username",
+                "If the value is not "
+                "specified in the task, the "
+                "value of environment "
+                "variable C(VMWARE_PASSWORD) "
+                "will be used instead.",
+            ],
+            "required": True,
+            "type": "str",
+        },
+        "vcenter_username": {
+            "description": [
+                "The vSphere vCenter " "username",
+                "If the value is not "
+                "specified in the task, the "
+                "value of environment "
+                "variable C(VMWARE_USER) "
+                "will be used instead.",
+            ],
+            "required": True,
+            "type": "str",
+        },
+        "vcenter_validate_certs": {
+            "default": True,
+            "description": [
+                "Allows connection "
+                "when SSL certificates "
+                "are not valid. Set to "
+                "C(false) when "
+                "certificates are not "
+                "trusted.",
+                "If the value is not "
+                "specified in the "
+                "task, the value of "
+                "environment variable "
+                "C(VMWARE_VALIDATE_CERTS) "
+                "will be used "
+                "instead.",
+            ],
+            "type": "bool",
+        },
     },
-    "requirements": ["python >= 3.6"],
+    "requirements": ["python >= 3.6", "aiohttp"],
     "short_description": "bar",
     "version_added": "1.0.0",
 }
@@ -315,6 +371,7 @@ def test_path_to_name():
 
 def test_gen_documentation():
 
+    a = rm.gen_documentation("foo", "bar", my_parameters)
     assert (
         rm.gen_documentation("foo", "bar", my_parameters)
         == documentation_data_expectation
@@ -323,7 +380,7 @@ def test_gen_documentation():
 
 def test_format_documentation():
 
-    expectation = """\'\'\'
+    expectation = """'''
 module: foo
 short_description: bar
 description: bar
@@ -344,13 +401,44 @@ options:
     - '3rd parameter is : enum,'
     - and this string is long and comes with a ' on purpose. This way, we can use
       it to ensure format_documentation() can break it up.
+    elements: str
     type: list
+  vcenter_hostname:
+    description:
+    - The hostname or IP address of the vSphere vCenter
+    - If the value is not specified in the task, the value of environment variable
+      C(VMWARE_HOST) will be used instead.
+    required: true
+    type: str
+  vcenter_password:
+    description:
+    - The vSphere vCenter username
+    - If the value is not specified in the task, the value of environment variable
+      C(VMWARE_PASSWORD) will be used instead.
+    required: true
+    type: str
+  vcenter_username:
+    description:
+    - The vSphere vCenter username
+    - If the value is not specified in the task, the value of environment variable
+      C(VMWARE_USER) will be used instead.
+    required: true
+    type: str
+  vcenter_validate_certs:
+    default: true
+    description:
+    - Allows connection when SSL certificates are not valid. Set to C(false) when
+      certificates are not trusted.
+    - If the value is not specified in the task, the value of environment variable
+      C(VMWARE_VALIDATE_CERTS) will be used instead.
+    type: bool
 author:
-- Ansible VMware team
+- Goneri Le Bouder (@goneri) <goneri@lebouder.net>
 version_added: 1.0.0
 requirements:
 - python >= 3.6
-\'\'\'"""
+- aiohttp
+'''"""
 
     assert rm.format_documentation(documentation_data_expectation) == expectation
 
@@ -386,7 +474,7 @@ def test_gen_arguments_py(monkeypatch):
         == """
 argument_spec['aaa'] = {'type': 'bool'}
 argument_spec['aaa'] = {'required': True, 'type': 'int'}
-argument_spec['ccc'] = {'type': 'list', 'choices': ['a', 'b', 'c']}"""
+argument_spec['ccc'] = {'type': 'list', 'choices': ['a', 'b', 'c'], 'elements': 'str'}"""
     )
 
 
