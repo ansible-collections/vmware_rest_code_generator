@@ -93,6 +93,7 @@ def extract(tasks):
                 print(f"Cannot find definition of '{r}', ensure:")
                 print("  - the variable is properly defined")
                 print("  - the task that define the name has a name")
+                exit(1)
 
     return by_modules
 
