@@ -567,8 +567,35 @@ async def _{operation}(params, session):
         return await update_changed_flag(_json, resp.status, "{operation}")
 """
 
+            FUNC_WITH_DATA_UPDATE_TPL = """
+async def _update(params, session):
+    accepted_fields = []
+    spec = {{}}
+    for i in accepted_fields:
+        if params[i]:
+            spec[i] = params[i]
+    _url = (
+        "https://{{vcenter_hostname}}"
+        "{path}").format(**params)
+    async with session.get(_url) as resp:
+        _json = await resp.json()
+        for k, v in _json["value"].items():
+            if k in spec and spec[k] == v:
+                del spec[k]
+        if not spec:
+          # Nothing has changed
+          return await update_changed_flag(_json, resp.status, "get")
+    async with session.{verb}(_url, json={{'spec': spec}}) as resp:
+        try:
+            if resp.headers["Content-Type"] == "application/json":
+                _json = await resp.json()
+        except KeyError:
+            _json = {{}}
+        return await update_changed_flag(_json, resp.status, "{operation}")
+"""
+
             FUNC_WITH_DATA_CREATE_TPL = """
-async def _{operation}(params, session):
+async def _create(params, session):
     accepted_fields = []
     _exists = await exists(params, session, build_url(params))
     if _exists:
@@ -606,11 +633,12 @@ async def _{operation}(params, session):
                             data_accepted_fields.append(p["name"])
 
             if data_accepted_fields:
-                template = (
-                    FUNC_WITH_DATA_CREATE_TPL
-                    if operation == "create"
-                    else FUNC_WITH_DATA_TPL
-                )
+                if operation == "create":
+                    template = FUNC_WITH_DATA_CREATE_TPL
+                elif operation == "update":
+                    template = FUNC_WITH_DATA_UPDATE_TPL
+                else:
+                    template = FUNC_WITH_DATA_TPL
                 func = ast.parse(
                     template.format(operation=operation, verb=verb, path=path)
                 ).body[0]
