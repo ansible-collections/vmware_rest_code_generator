@@ -12,7 +12,7 @@ def _task_to_string(task):
     yaml = ruamel.yaml.YAML()
     yaml.dump([task], a)
     a.seek(0)
-    return a.read()
+    return a.read().rstrip()
 
 
 def get_tasks(target_dir, scenario):
@@ -95,9 +95,9 @@ def flatten_module_examples(module_examples):
     yaml = ruamel.yaml.YAML()
     yaml.indent(sequence=4, offset=2)
     for block in depends_on:
-        result += block
+        result += block + "\n"
     for block in blocks:
-        result += block
+        result += block + "\n"
     return result
 
 
