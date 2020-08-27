@@ -28,13 +28,15 @@ def get_tasks(target_dir, scenario):
 def extract(tasks):
     by_modules = collections.defaultdict(dict)
     registers = {}
-    for task in tasks:
+
+    for task in sorted(tasks, key=lambda item: (item.get("name", "")),):
         if "register" in task:
             if task["register"].startswith("_"):
                 print(f"Hiding register {task['register']} because of the _ prefix.")
                 del task["register"]
             else:
-                registers[task["register"]] = task
+                if "name" in task:
+                    registers[task["register"]] = task
                 print("Task register: %s" % task["register"])
 
         if "set_fact" in task:
@@ -83,7 +85,14 @@ def extract(tasks):
         for r in sorted(list(set(by_modules[module_name]["use_registers"]))):
             if r in ["item"]:
                 continue
-            by_modules[module_name]["depends_on"].append(_task_to_string(registers[r]))
+            try:
+                by_modules[module_name]["depends_on"].append(
+                    _task_to_string(registers[r])
+                )
+            except KeyError:
+                print(f"Cannot find definition of '{r}', ensure:")
+                print("  - the variable is properly defined")
+                print("  - the task that define the name has a name")
 
     return by_modules
 
