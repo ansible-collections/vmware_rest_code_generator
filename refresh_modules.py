@@ -120,6 +120,8 @@ def gen_documentation(name, description, parameters):
             option["choices"] = sorted(parameter["enum"])
         if option["type"] == "list":
             option["elements"] = "str"
+        if parameter.get("default"):
+            option["default"] = parameter.get("default")
 
         documentation["options"][normalized_name] = option
     return documentation
@@ -221,6 +223,9 @@ def gen_arguments_py(parameters, list_index=None):
             _add_key(assign, "choices", sorted(parameter["enum"]))
         if python_type(parameter["type"]) == "list":
             _add_key(assign, "elements", "str")
+
+        if "default" in parameter:
+            _add_key(assign, "default", parameter["default"])
 
         #        if "operationIds" in parameter:
         #            _add_key(assign, "operationIds", sorted(parameter["operationIds"]))
@@ -343,12 +348,22 @@ class AnsibleModuleBase:
                 del result["required"]
                 result["required_if"] = sorted(set(result["operationIds"]))
 
+        states = []
+        for operation in sorted(list(self.default_operationIds)):
+            if operation in ["create", "update"]:
+                states.append("present")
+            elif operation == "delete":
+                states.append("absent")
+            else:
+                states.append(operation)
+
         results["state"] = {
             "name": "state",
-            "default": "present",
             "type": "str",
-            "enum": sorted(list(self.default_operationIds)),
+            "enum": sorted(list(states)),
         }
+        if "present" in states:
+            results["state"]["default"] = "present"
 
         return sorted(results.values(), key=lambda item: item["name"])
 
@@ -528,7 +543,17 @@ return (
     def gen_entry_point_func(self):
         MAIN_FUNC = """
 async def entry_point(module, session):
-    func = globals()["_" + module.params['state']]
+    if module.params['state'] == "present":
+        if "_create" in globals():
+            operation = "create"
+        else:
+            operation = "update"
+    elif module.params['state'] == "absent":
+        operation = "delete"
+    else:
+        operation = module.params['state']
+
+    func = globals()["_" + operation]
     return await func(module.params, session)
 """
         main_func = ast.parse(MAIN_FUNC.format(name=self.name))
