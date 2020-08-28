@@ -270,7 +270,17 @@ class AnsibleModuleBase:
         self.default_operationIds = None
 
     def list_index(self):
-        return None
+        for i in ["get", "update", "delete"]:
+            if i not in self.resource.operations:
+                continue
+            path = self.resource.operations[i][1]
+            break
+        else:
+            return
+
+        m = re.search(r"{([-\w]+)}$", path)
+        if m:
+            return m.group(1)
 
     def parameters(self):
         def itera(operationId):
@@ -583,23 +593,25 @@ async def _update(params, session):
             if k in spec and spec[k] == v:
                 del spec[k]
         if not spec:
-          # Nothing has changed
-          return await update_changed_flag(_json, resp.status, "get")
+            # Nothing has changed
+            _json["id"] = params.get("{list_index}")
+            return await update_changed_flag(_json, resp.status, "get")
     async with session.{verb}(_url, json={{'spec': spec}}) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()
         except KeyError:
             _json = {{}}
+        _json["id"] = params.get("{list_index}")
         return await update_changed_flag(_json, resp.status, "{operation}")
 """
 
             FUNC_WITH_DATA_CREATE_TPL = """
 async def _create(params, session):
     accepted_fields = []
-    _exists = await exists(params, session, build_url(params))
-    if _exists:
-        return (await update_changed_flag({{"value": _exists}}, 200, 'get'))
+    _json = await exists(params, session, build_url(params))
+    if _json:
+        return (await update_changed_flag(_json, 200, 'get'))
 
     spec = {{}}
     for i in accepted_fields:
@@ -620,7 +632,7 @@ async def _create(params, session):
                 _id = list(_json["value"].values())[0]
             else:
                 _id = _json["value"]
-            _json = {{"value": await get_device_info(params, session, _url, _id)}}
+            _json = await get_device_info(params, session, _url, _id)
 
         return await update_changed_flag(_json, resp.status, "{operation}")
 """
@@ -640,7 +652,12 @@ async def _create(params, session):
                 else:
                     template = FUNC_WITH_DATA_TPL
                 func = ast.parse(
-                    template.format(operation=operation, verb=verb, path=path)
+                    template.format(
+                        operation=operation,
+                        verb=verb,
+                        path=path,
+                        list_index=self.list_index(),
+                    )
                 ).body[0]
                 func.body[0].value.elts = [
                     ast.Constant(value=i, kind=None)
@@ -686,14 +703,6 @@ return (
         self.name = resource.name + "_info"
         self.default_operationIds = ["get", "list"]
 
-    def list_index(self):
-        if "get" not in self.resource.operations:
-            return
-        path = self.resource.operations["get"][1]
-        m = re.search(r"{([-\w]+)}$", path)
-        if m:
-            return m.group(1)
-
     def parameters(self):
         return [i for i in list(super().parameters()) if i["name"] != "state"]
 
@@ -724,9 +733,12 @@ return (
 async def entry_point(module, session):
     async with session.get(build_url(module.params)) as resp:
         _json = await resp.json()
+        if module.params.get("{list_index}"):
+            _json["id"] = module.params.get("{list_index}")
         return await update_changed_flag(_json, resp.status, "get")
 """
-        return FUNC.format(name=self.name)
+        template = FUNC if self.list_index() else FUNC
+        return template.format(name=self.name, list_index=self.list_index())
 
 
 class Definitions:
