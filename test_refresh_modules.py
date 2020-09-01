@@ -591,9 +591,7 @@ def test_AnsibleModule_parameters():
     definitions = rm.Definitions(my_definitions)
     module = rm.AnsibleModule(resources["vcenter_vm"], definitions)
     assert module.name == "vcenter_vm"
-    assert module.parameters() == [
-        {"enum": [], "name": "state", "type": "str"}
-    ]
+    assert module.parameters() == [{"enum": [], "name": "state", "type": "str"}]
 
 
 # AnsibleModule - with complex URL
@@ -687,11 +685,7 @@ def test_AnsibleModule_parameters_complex():
             "required": False,
             "type": "boolean",
         },
-        {
-            "enum": ["check_in", "check_out"],
-            "name": "state",
-            "type": "str",
-        },
+        {"enum": ["check_in", "check_out"], "name": "state", "type": "str"},
         {
             "description": "Identifier of the content library item containing the source "
             + "virtual machine template to be checked out.",
