@@ -592,7 +592,7 @@ def test_AnsibleModule_parameters():
     module = rm.AnsibleModule(resources["vcenter_vm"], definitions)
     assert module.name == "vcenter_vm"
     assert module.parameters() == [
-        {"default": "present", "enum": [], "name": "state", "type": "str"}
+        {"enum": [], "name": "state", "type": "str"}
     ]
 
 
@@ -688,7 +688,6 @@ def test_AnsibleModule_parameters_complex():
             "type": "boolean",
         },
         {
-            "default": "present",
             "enum": ["check_in", "check_out"],
             "name": "state",
             "type": "str",
