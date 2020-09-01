@@ -797,6 +797,12 @@ class Path:
     def summary(self, verb):
         return self.value[verb]["summary"]
 
+    def is_tech_preview(self):
+        for verb in self.value.keys():
+            if "Technology Preview" in self.summary(verb):
+                return True
+        return False
+
 
 class SwaggerFile:
     def __init__(self, file_path):
@@ -812,6 +818,9 @@ class SwaggerFile:
         result = {}
 
         for path in [Path(p, v) for p, v in paths.items()]:
+            if path.is_tech_preview():
+                print(f"Skipping {path.path} (Technology Preview)")
+                continue
             if path not in paths:
                 result[path.path] = path
             for verb, desc in path.value.items():
