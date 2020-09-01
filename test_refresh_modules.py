@@ -478,13 +478,6 @@ argument_spec['ccc'] = {'type': 'list', 'choices': ['a', 'b', 'c'], 'elements': 
     )
 
 
-def test_filter_out_trusted_modules():
-    assert list(rm.filter_out_trusted_modules(["bla_vcenter_vm_a"])) == [
-        "bla_vcenter_vm_a"
-    ]
-    assert list(rm.filter_out_trusted_modules(["vcenter_vm_a"])) == []
-
-
 def test_SwaggerFile_load_paths():
     paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
     assert paths["/rest/vcenter/vm"].operations == {
@@ -554,6 +547,16 @@ def test_AnsibleModuleBase():
     definitions = rm.Definitions(my_definitions)
     module = rm.AnsibleModuleBase(resources["vcenter_vm"], definitions)
     assert module.name == "vcenter_vm"
+
+
+def test_filter_out_trusted_module():
+    paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
+    resources = rm.SwaggerFile.init_resources(paths.values())
+    definitions = rm.Definitions(my_definitions)
+    module = rm.AnsibleModuleBase(resources["vcenter_vm"], definitions)
+    assert module.is_trusted()
+    module.name = "something_we_dont_trust"
+    assert not module.is_trusted()
 
 
 # AnsibleInfoModule
