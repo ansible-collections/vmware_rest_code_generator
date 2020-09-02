@@ -233,24 +233,6 @@ def gen_arguments_py(parameters, list_index=None):
     return result
 
 
-def filter_out_trusted_modules(modules):
-    trusted_module_allowlist = [
-        "vcenter_vm.*",
-        "vcenter_folder_info",
-        "vcenter_cluster_info",
-        "vcenter_datacenter",
-        "vcenter_datacenter_info",
-        "vcenter_datastore_info",
-        "vcenter_network_info",
-    ]
-
-    regexes = [re.compile(i) for i in trusted_module_allowlist]
-    for m in modules:
-        if any([r.match(m) for r in regexes]):
-            continue
-        yield m
-
-
 def _indent(text_block, indent=0):
     result = ""
     for l in text_block.split("\n"):
@@ -273,6 +255,23 @@ class AnsibleModuleBase:
         self.name = resource.name
         self.description = "Handle resource of type {name}".format(name=resource.name)
         self.default_operationIds = None
+
+    def is_trusted(self):
+        trusted_module_allowlist = [
+            "vcenter_cluster_info",
+            "vcenter_datacenter_info",
+            "vcenter_datacenter",
+            "vcenter_datastore_info",
+            "vcenter_folder_info",
+            "vcenter_host_info",
+            "vcenter_host",
+            "vcenter_network_info",
+            "vcenter_vm($|_.+)",
+        ]
+
+        regexes = [re.compile(i) for i in trusted_module_allowlist]
+        if any([r.match(self.name) for r in regexes]):
+            return True
 
     def list_index(self):
         for i in ["get", "update", "delete"]:
@@ -887,46 +886,19 @@ def main():
         resources = swagger_file.init_resources(swagger_file.paths.values())
 
         for resource in resources.values():
-            if not (
-                resource.name.startswith("vcenter_vm_")
-                or resource.name
-                in [
-                    "vcenter_cluster",
-                    "vcenter_datacenter",
-                    "vcenter_datastore",
-                    "vcenter_folder",
-                    "vcenter_host",
-                    "vcenter_network",
-                    "vcenter_vm",
-                ]
-            ):
-                print(f"skipping resource {resource.name}")
-                continue
             if resource.name.startswith("vcenter_trustedinfrastructure"):
                 continue
             if "get" in resource.operations or "list" in resource.operations:
                 module = AnsibleInfoModule(
                     resource, definitions=swagger_file.definitions
                 )
-                if len(module.default_operationIds) > 0:
+                if module.is_trusted() and len(module.default_operationIds) > 0:
                     module.renderer(target_dir=args.target_dir)
                     module_list.append(module.name)
             module = AnsibleModule(resource, definitions=swagger_file.definitions)
-            if len(module.default_operationIds) > 0:
+            if module.is_trusted() and len(module.default_operationIds) > 0:
                 module.renderer(target_dir=args.target_dir)
                 module_list.append(module.name)
-
-    yaml = YAML()
-    my_galaxy = args.target_dir / "galaxy.yml"
-    galaxy_contents = yaml.load(my_galaxy.open("r"))
-    paths_of_untrusted_modules = [
-        "plugins/modules/{}.py".format(m)
-        for m in filter_out_trusted_modules(module_list)
-    ]
-
-    galaxy_contents["build_ignore"] = paths_of_untrusted_modules
-    with my_galaxy.open("w") as fd:
-        yaml.dump(galaxy_contents, fd)
 
     ignore_dir = args.target_dir / "tests" / "sanity"
     ignore_dir.mkdir(parents=True, exist_ok=True)
@@ -945,11 +917,6 @@ def main():
             ]:
                 fd.write("{f} {test}\n".format(f=f, test=test))
 
-    galaxy_contents = yaml.load(my_galaxy.open("r"))
-    paths_of_untrusted_modules = [
-        "plugins/modules/{}.py".format(m)
-        for m in filter_out_trusted_modules(module_list)
-    ]
     dev_md = args.target_dir / "dev.md"
     dev_md.write_text(
         (
