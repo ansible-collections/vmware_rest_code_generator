@@ -30,6 +30,13 @@ def extract(tasks):
     registers = {}
 
     for task in sorted(tasks, key=lambda item: (item.get("name", "")),):
+        if "name" not in task:
+            continue
+
+        if task["name"].startswith("_"):
+            print(f"Skip task {task['name']} because of the _")
+            continue
+
         if "register" in task:
             if task["register"].startswith("_"):
                 print(f"Hiding register {task['register']} because of the _ prefix.")
@@ -44,15 +51,10 @@ def extract(tasks):
                 registers[fact_name] = task
 
         use_registers = []
+
         if "with_items" in task and "{{" in task["with_items"]:
             variable_name = task["with_items"].strip(" }{")
             use_registers.append(variable_name.split(".")[0])
-
-        if "name" not in task:
-            continue
-
-        if task["name"].startswith("_"):
-            continue
 
         module_name = None
         for key in list(task.keys()):
