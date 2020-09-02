@@ -123,6 +123,7 @@ my_raw_paths_data = {
                     "type": "string",
                 }
             ],
+            "summary": "",
             "responses": {
                 "200": {
                     "description": "Information about the VM.",
@@ -150,6 +151,7 @@ my_raw_paths_data = {
                     "type": "array",
                 }
             ],
+            "summary": "",
             "responses": {
                 "200": {
                     "description": "A list",
@@ -196,6 +198,7 @@ my_raw_paths_data_with_param_in_path = {
                     "type": "string",
                 },
             ],
+            "summary": "",
             "responses": {
                 "200": {
                     "description": "Identifier of the virtual machine that was checked out of the library item.",
@@ -241,6 +244,7 @@ my_raw_paths_data_with_param_in_path = {
                     "type": "string",
                 },
             ],
+            "summary": "",
             "responses": {
                 "200": {
                     "description": "The new version of the library item.",
