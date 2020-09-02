@@ -268,10 +268,13 @@ class AnsibleModuleBase:
             "vcenter_network_info",
             "vcenter_vm($|_.+)",
         ]
+        if self.name in ["vcenter_vm_guest_customization"]:
+            return False
 
         regexes = [re.compile(i) for i in trusted_module_allowlist]
         if any([r.match(self.name) for r in regexes]):
             return True
+        return False
 
     def list_index(self):
         for i in ["get", "update", "delete"]:
