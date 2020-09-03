@@ -7,6 +7,7 @@ import io
 import json
 import re
 import pathlib
+import shutil
 import subprocess
 import astunparse
 from ruamel.yaml import YAML
@@ -928,6 +929,9 @@ def main():
             ""
             "version: {git_revision}\n"
         ).format(git_revision=git_revision())
+    )
+    shutil.copy(
+        "module_utils/vmware_rest.py", str(args.target_dir / "plugins" / "module_utils")
     )
 
 
