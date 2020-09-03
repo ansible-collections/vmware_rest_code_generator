@@ -165,3 +165,28 @@ async def exists(params, session, url):
                 break
         else:
             return device
+
+
+def set_subkey(root, path, value):
+    cur_loc = root
+    splitted = path.split("/")
+    for j in splitted[:-1]:
+        if j not in cur_loc:
+            cur_loc[j] = {}
+        cur_loc = cur_loc[j]
+    cur_loc[splitted[-1]] = value
+
+
+def prepare_payload(params, payload_format):
+    payload = {}
+    for i in payload_format["body"].keys():
+        if params[i] is None:
+            continue
+        if isinstance(params[i], dict):
+            for k, v in params[i].items():
+                path = payload_format["body"][i][k]
+                set_subkey(payload, path, v)
+        else:
+            path = payload_format["body"][i]
+            set_subkey(payload, path, params[i])
+    return payload

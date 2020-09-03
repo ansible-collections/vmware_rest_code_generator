@@ -290,12 +290,46 @@ class AnsibleModuleBase:
         if m:
             return m.group(1)
 
+    def payload(self):
+        """"Return a structure that describe the format of the data to send back."""
+        payload = {}
+        for operationId in self.resource.operations:
+            payload[operationId] = {"query": {}, "body": {}, "path": {}}
+            for parameter in AnsibleModule._flatten_parameter(
+                self.resource.operations[operationId][2], self.definitions
+            ):
+                name = parameter["name"]
+                prefix = []
+                _in = parameter.get("in", "body")
+
+                # We don't expose the "spec" dict in the module parameters
+                if parameter["type"] == "dict":
+                    if name == "spec":
+                        prefix.append(name)
+                    for i in parameter["subkeys"]:
+                        if i["type"] == "dict":
+                            sub_prefix = prefix + [i["name"]]
+                            payload[operationId][_in][i["name"]] = {}
+                            for j in i["subkeys"]:
+                                payload[operationId][_in][i["name"]][
+                                    j["name"]
+                                ] = "/".join(sub_prefix + [j["name"]])
+                        else:
+                            payload[operationId][_in][i["name"]] = "/".join(
+                                prefix + [i["name"]]
+                            )
+                else:
+                    payload[operationId][_in][name] = parameter["name"]
+
+        return payload
+
     def parameters(self):
         def itera(operationId):
             for parameter in AnsibleModule._flatten_parameter(
                 self.resource.operations[operationId][2], self.definitions
             ):
                 name = parameter["name"]
+
                 if name == "spec":
                     for i in parameter["subkeys"]:
                         yield i
@@ -421,9 +455,6 @@ class AnsibleModuleBase:
             else:
                 yield i
 
-    def in_query_parameters(self):
-        return [p["name"] for p in self.parameters() if p.get("in") == "query"]
-
     def renderer(self, target_dir):
         DEFAULT_MODULE = """
 #!/usr/bin/python
@@ -436,7 +467,8 @@ DOCUMENTATION = {documentation}
 EXAMPLES = \"\"\"
 \"\"\"
 
-IN_QUERY_PARAMETER = {in_query_parameters}
+# This structure describes the format of the data expected by the end-points
+PAYLOAD_FORMAT = {payload_format}
 
 import socket
 import json
@@ -451,7 +483,8 @@ from ansible_collections.vmware.vmware_rest.plugins.module_utils.vmware_rest imp
     update_changed_flag,
     get_device_info,
     list_devices,
-    exists)
+    exists,
+    prepare_payload)
 
 
 
@@ -510,15 +543,13 @@ if __name__ == '__main__':
         url_func = self.gen_url_func()
         entry_point_func = self.gen_entry_point_func()
 
-        in_query_parameters = self.in_query_parameters()
-
         module_content = DEFAULT_MODULE.format(
             name=self.name,
             documentation=documentation,
-            in_query_parameters=in_query_parameters,
             url_func=_indent(url_func, 4),
             entry_point_func=_indent(entry_point_func, 0),
             arguments=_indent(arguments, 4),
+            payload_format=self.payload(),
         )
 
         module_dir = target_dir / "plugins" / "modules"
@@ -573,30 +604,14 @@ async def entry_point(module, session):
                 )
                 continue
 
-            FUNC_NO_DATA_TPL = """
-async def _{operation}(params, session):
-    _url = (
-        "https://{{vcenter_hostname}}"
-        "{path}").format(**params) + gen_args(params, IN_QUERY_PARAMETER)
-    async with session.{verb}(_url) as resp:
-        try:
-            if resp.headers["Content-Type"] == "application/json":
-                _json = await resp.json()
-        except KeyError:
-            _json = {{}}
-        return await update_changed_flag(_json, resp.status, "{operation}")
-"""
             FUNC_WITH_DATA_TPL = """
 async def _{operation}(params, session):
-    accepted_fields = []
-    spec = {{}}
-    for i in accepted_fields:
-        if params[i]:
-            spec[i] = params[i]
+    _in_query_parameters = PAYLOAD_FORMAT["{operation}"]["query"].keys()
+    payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
     _url = (
         "https://{{vcenter_hostname}}"
-        "{path}").format(**params)
-    async with session.{verb}(_url, json={{'spec': spec}}) as resp:
+        "{path}").format(**params) + gen_args(params, _in_query_parameters)
+    async with session.{verb}(_url, json=payload) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()
@@ -607,24 +622,23 @@ async def _{operation}(params, session):
 
             FUNC_WITH_DATA_UPDATE_TPL = """
 async def _update(params, session):
-    accepted_fields = []
-    spec = {{}}
-    for i in accepted_fields:
-        if params[i]:
-            spec[i] = params[i]
+    payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
     _url = (
         "https://{{vcenter_hostname}}"
         "{path}").format(**params)
     async with session.get(_url) as resp:
         _json = await resp.json()
         for k, v in _json["value"].items():
-            if k in spec and spec[k] == v:
-                del spec[k]
-        if not spec:
+            if k in payload and payload[k] == v:
+                del payload[k]
+            elif "spec" in payload:
+                if k in payload["spec"] and payload["spec"][k] == v:
+                    del payload["spec"][k]
+        if payload == {{}} or payload == {{"spec": {{}}}}:
             # Nothing has changed
             _json["id"] = params.get("{list_index}")
             return await update_changed_flag(_json, resp.status, "get")
-    async with session.{verb}(_url, json={{'spec': spec}}) as resp:
+    async with session.{verb}(_url, json=payload) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()
@@ -636,7 +650,6 @@ async def _update(params, session):
 
             FUNC_WITH_DATA_CREATE_TPL = """
 async def _create(params, session):
-    accepted_fields = []
     _json = await exists(params, session, build_url(params))
     if _json:
         if "_update" in globals():
@@ -645,14 +658,11 @@ async def _create(params, session):
         else:
             return (await update_changed_flag(_json, 200, 'get'))
 
-    spec = {{}}
-    for i in accepted_fields:
-        if params[i]:
-            spec[i] = params[i]
+    payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
     _url = (
         "https://{{vcenter_hostname}}"
         "{path}").format(**params)
-    async with session.{verb}(_url, json={{'spec': spec}}) as resp:
+    async with session.{verb}(_url, json=payload) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()
@@ -697,7 +707,9 @@ async def _create(params, session):
                 ]
             else:
                 func = ast.parse(
-                    FUNC_NO_DATA_TPL.format(operation=operation, verb=verb, path=path,)
+                    FUNC_WITH_DATA_TPL.format(
+                        operation=operation, verb=verb, path=path,
+                    )
                 ).body[0]
 
             main_func.body.append(func)
@@ -709,25 +721,29 @@ class AnsibleInfoModule(AnsibleModuleBase):
 
     URL_WITH_LIST = """
 if params['{list_index}']:
+    _in_query_parameters = PAYLOAD_FORMAT["get"]["query"].keys()
     return (
         "https://{{vcenter_hostname}}"
-        "{path}").format(**params) + gen_args(params, IN_QUERY_PARAMETER)
+        "{path}").format(**params) + gen_args(params, _in_query_parameters)
 else:
+    _in_query_parameters = PAYLOAD_FORMAT["list"]["query"].keys()
     return (
         "https://{{vcenter_hostname}}"
-        "{list_path}").format(**params) + gen_args(params, IN_QUERY_PARAMETER)
+        "{list_path}").format(**params) + gen_args(params, _in_query_parameters)
 """
 
     URL_LIST_ONLY = """
+_in_query_parameters = PAYLOAD_FORMAT["list"]["query"].keys()
 return (
     "https://{{vcenter_hostname}}"
-    "{list_path}").format(**params) + gen_args(params, IN_QUERY_PARAMETER)
+    "{list_path}").format(**params) + gen_args(params, _in_query_parameters)
 """
 
     URL = """
+_in_query_parameters = PAYLOAD_FORMAT["get"]["query"].keys()
 return (
     "https://{{vcenter_hostname}}"
-    "{path}").format(**params) + gen_args(params, IN_QUERY_PARAMETER)
+    "{path}").format(**params) + gen_args(params, _in_query_parameters)
 """
 
     def __init__(self, resource, definitions):
