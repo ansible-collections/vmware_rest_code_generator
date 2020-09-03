@@ -269,7 +269,11 @@ class AnsibleModuleBase:
             "vcenter_network_info",
             "vcenter_vm($|_.+)",
         ]
-        if self.name in ["vcenter_vm_guest_customization"]:
+        if self.name in [
+            "vcenter_vm_guest_customization",
+            "vcenter_vm_guest_power",
+            "vcenter_vm_guest_power_info",
+        ]:
             return False
 
         regexes = [re.compile(i) for i in trusted_module_allowlist]
