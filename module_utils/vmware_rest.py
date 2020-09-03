@@ -139,7 +139,7 @@ async def list_devices(params, session, url):
         device_type = url.split("/")[-1]
         if device_type == "ethernet":
             device_type = "nic"
-        elif device_type == "sata":
+        elif device_type in ["sata", "scsi"]:
             device_type = "adapter"
         _id = device.get(device_type)
         if not _id:
