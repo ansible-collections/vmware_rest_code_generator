@@ -160,15 +160,18 @@ def format_documentation(documentation):
 
 
 def path_to_name(path):
-    def is_element(i):
-        if i and "{" not in i:
-            return True
+    _path = path.lstrip("/").split("?")[0]
+    elements = []
+    keys = []
+    for i in _path.split("/"):
+        if "{" in i:
+            keys.append(i)
+        elif len(keys) > 1:
+            # action for a submodule, we gather these end-points in the main module
+            continue
         else:
-            return False
+            elements.append(i)
 
-    _path = path.split("?")[0]
-
-    elements = [i for i in _path.split("/") if is_element(i)]
     # workaround for vcenter_vm_power
     if elements[-1] in ("stop", "start", "suspend", "reset"):
         elements = elements[:-1]
