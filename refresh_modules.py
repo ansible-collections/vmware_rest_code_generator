@@ -482,13 +482,15 @@ try:
 except ImportError:
     from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.vmware.vmware_rest.plugins.module_utils.vmware_rest import (
-    gen_args,
-    open_session,
-    update_changed_flag,
-    get_device_info,
-    list_devices,
     exists,
-    prepare_payload)
+    gen_args,
+    get_device_info,
+    get_subdevice_type,
+    list_devices,
+    open_session,
+    prepare_payload,
+    update_changed_flag,
+    )
 
 
 
@@ -612,6 +614,11 @@ async def entry_point(module, session):
 async def _{operation}(params, session):
     _in_query_parameters = PAYLOAD_FORMAT["{operation}"]["query"].keys()
     payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
+    subdevice_type = get_subdevice_type("{path}")
+    if subdevice_type and not params[subdevice_type]:
+        _json = (await exists(params, session, build_url(params)))
+        if _json:
+            params[subdevice_type] = _json['id']
     _url = (
         "https://{{vcenter_hostname}}"
         "{path}").format(**params) + gen_args(params, _in_query_parameters)
@@ -628,10 +635,11 @@ async def _{operation}(params, session):
 async def _{operation}(params, session):
     _in_query_parameters = PAYLOAD_FORMAT["{operation}"]["query"].keys()
     payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
-    # Note: we only need that when we delete an SATA or SCSI adapter
-    _json = (await exists(params, session, build_url(params)))
-    if _json:
-        params['adapter'] = _json['id']
+    subdevice_type = get_subdevice_type("{path}")
+    if subdevice_type and not params[subdevice_type]:
+        _json = (await exists(params, session, build_url(params)))
+        if _json:
+            params[subdevice_type] = _json['id']
     _url = (
         "https://{{vcenter_hostname}}"
         "{path}").format(**params) + gen_args(params, _in_query_parameters)
@@ -658,10 +666,6 @@ async def _update(params, session):
             elif "spec" in payload:
                 if k in payload["spec"] and payload["spec"][k] == v:
                     del payload["spec"][k]
-        if payload == {{}} or payload == {{"spec": {{}}}}:
-            # Nothing has changed
-            _json["id"] = params.get("{list_index}")
-            return await update_changed_flag(_json, resp.status, "get")
 
         # NOTE: workaround for vcenter_vm_hardware, upgrade_version needs the upgrade_policy
         # option. So we ensure it's here.
@@ -671,6 +675,10 @@ async def _update(params, session):
         except KeyError:
             pass
 
+        if payload == {{}} or payload == {{"spec": {{}}}}:
+            # Nothing has changed
+            _json["id"] = params.get("{list_index}")
+            return await update_changed_flag(_json, resp.status, "get")
     async with session.{verb}(_url, json=payload) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
@@ -683,7 +691,10 @@ async def _update(params, session):
 
             FUNC_WITH_DATA_CREATE_TPL = """
 async def _create(params, session):
-    _json = await exists(params, session, build_url(params))
+    if params["{list_index}"]:
+        _json = await get_device_info(params, session, build_url(params), params["{list_index}"])
+    else:
+        _json = await exists(params, session, build_url(params), ["{list_index}"])
     if _json:
         if "_update" in globals():
             params["{list_index}"] = _json["id"]
