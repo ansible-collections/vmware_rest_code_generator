@@ -273,6 +273,7 @@ class AnsibleModuleBase:
             "vcenter_vm_guest_customization",
             "vcenter_vm_guest_power",
             "vcenter_vm_guest_power_info",
+            "vcenter_vm_hardware_action_upgrade",  # vm_hardware already allow the version upgrade
         ]:
             return False
 
