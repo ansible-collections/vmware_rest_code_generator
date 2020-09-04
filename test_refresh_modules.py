@@ -369,7 +369,7 @@ def test_path_to_name():
     )
     assert (
         rm.path_to_name("/rest/vcenter/vm/{vm}/hardware/ethernet/{nic}/disconnect")
-        == "vcenter_vm_hardware_ethernet_disconnect"
+        == "vcenter_vm_hardware_ethernet"
     )
 
 
