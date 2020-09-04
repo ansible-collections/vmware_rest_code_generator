@@ -624,6 +624,26 @@ async def _{operation}(params, session):
         return await update_changed_flag(_json, resp.status, "{operation}")
 """
 
+            FUNC_WITH_DATA_DELETE_TPL = """
+async def _{operation}(params, session):
+    _in_query_parameters = PAYLOAD_FORMAT["{operation}"]["query"].keys()
+    payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
+    # Note: we only need that when we delete an SATA or SCSI adapter
+    _json = (await exists(params, session, build_url(params)))
+    if _json:
+        params['adapter'] = _json['id']
+    _url = (
+        "https://{{vcenter_hostname}}"
+        "{path}").format(**params) + gen_args(params, _in_query_parameters)
+    async with session.{verb}(_url, json=payload) as resp:
+        try:
+            if resp.headers["Content-Type"] == "application/json":
+                _json = await resp.json()
+        except KeyError:
+            _json = {{}}
+        return await update_changed_flag(_json, resp.status, "{operation}")
+"""
+
             FUNC_WITH_DATA_UPDATE_TPL = """
 async def _update(params, session):
     payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
@@ -683,39 +703,23 @@ async def _create(params, session):
         return await update_changed_flag(_json, resp.status, "{operation}")
 """
 
-            data_accepted_fields = []
-            for p in self.parameters():
-                if "operationIds" in p:
-                    if operation in p["operationIds"]:
-                        if not p.get("in") in ["path", "query"]:
-                            data_accepted_fields.append(p["name"])
-
-            if data_accepted_fields:
-                if operation == "create":
-                    template = FUNC_WITH_DATA_CREATE_TPL
-                elif operation == "update":
-                    template = FUNC_WITH_DATA_UPDATE_TPL
-                else:
-                    template = FUNC_WITH_DATA_TPL
-                func = ast.parse(
-                    template.format(
-                        operation=operation,
-                        verb=verb,
-                        path=path,
-                        list_index=self.list_index(),
-                    )
-                ).body[0]
-                func.body[0].value.elts = [
-                    ast.Constant(value=i, kind=None)
-                    for i in sorted(data_accepted_fields)
-                ]
+            if operation == "delete":
+                template = FUNC_WITH_DATA_DELETE_TPL
+            elif operation == "create":
+                template = FUNC_WITH_DATA_CREATE_TPL
+            elif operation == "update":
+                template = FUNC_WITH_DATA_UPDATE_TPL
             else:
-                func = ast.parse(
-                    FUNC_WITH_DATA_TPL.format(
-                        operation=operation, verb=verb, path=path,
-                    )
-                ).body[0]
-
+                template = FUNC_WITH_DATA_TPL
+            func = ast.parse(
+                template.format(
+                    operation=operation,
+                    verb=verb,
+                    path=path,
+                    list_index=self.list_index(),
+                )
+            ).body[0]
+            # TODO, we can probably skip the transformation
             main_func.body.append(func)
 
         return astunparse.unparse(main_func.body)

@@ -156,7 +156,7 @@ async def get_device_info(params, session, url, _id):
 
 
 async def exists(params, session, url):
-    unicity_keys = ["bus", "pci_slot_number"]
+    unicity_keys = ["pci_slot_number"]
     devices = await list_devices(params, session, url)
 
     for device in devices:
