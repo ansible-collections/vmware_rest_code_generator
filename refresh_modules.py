@@ -662,6 +662,15 @@ async def _update(params, session):
             # Nothing has changed
             _json["id"] = params.get("{list_index}")
             return await update_changed_flag(_json, resp.status, "get")
+
+        # NOTE: workaround for vcenter_vm_hardware, upgrade_version needs the upgrade_policy
+        # option. So we ensure it's here.
+        try:
+            if payload["spec"]["upgrade_version"] and "upgrade_policy" not in payload["spec"]:
+                payload["spec"]["upgrade_policy"] = _json["value"]["upgrade_policy"]
+        except KeyError:
+            pass
+
     async with session.{verb}(_url, json=payload) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
