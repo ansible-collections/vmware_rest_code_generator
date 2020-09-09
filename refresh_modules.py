@@ -409,6 +409,8 @@ class AnsibleModuleBase:
         }
         if "present" in states:
             results["state"]["default"] = "present"
+        elif "set" in states:
+            results["state"]["default"] = "set"
 
         return sorted(results.values(), key=lambda item: item["name"])
 
