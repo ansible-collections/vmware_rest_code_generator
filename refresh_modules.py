@@ -98,6 +98,8 @@ def gen_documentation(name, description, parameters):
         "version_added": "1.0.0",
     }
 
+    # Note: this series of if block is overcomplicated and should
+    # be refactorized.
     for parameter in parameters:
         normalized_name = normalize_parameter_name(parameter["name"])
         description = []
@@ -109,12 +111,27 @@ def gen_documentation(name, description, parameters):
         if parameter.get("description"):
             description.append(parameter["description"])
         if parameter.get("subkeys"):
-            description.append("Validate attributes are:")
+            description.append("Valide attributes are:")
             for subkey in parameter.get("subkeys"):
                 subkey["type"] = python_type(subkey["type"])
                 description.append(
                     " - C({name}) ({type}): {description}".format(**subkey)
                 )
+                if "enum" in subkey:
+                    description.append("   - Accepted values:")
+                    for i in subkey["enum"]:
+                        description.append(f"     - {i}")
+                if "properties" in subkey:
+                    description.append("   - Accepted keys:")
+                    for i, v in subkey["properties"].items():
+                        description.append(
+                            f"     - {i} ({v['type']}): {v['description']}"
+                        )
+                        if v.get("enum"):
+                            description.append("Accepted value for this field:")
+                            for val in v.get("enum"):
+                                description.append(f"       - C({val})")
+
         option["description"] = list(normalize_description(description))
         option["type"] = python_type(option["type"])
         if "enum" in parameter:
@@ -246,6 +263,36 @@ def _indent(text_block, indent=0):
     return result
 
 
+def flatten_ref(tree, definitions):
+    if isinstance(tree, str):
+        if tree.startswith("#/definitions/"):
+            raise Exception("TODO")
+        return definitions.get(tree)
+    elif isinstance(tree, list):
+        return [flatten_ref(i, definitions) for i in tree]
+    elif tree is None:
+        return {}
+    for k in tree:
+        v = tree[k]
+        if k == "$ref":
+            dotted = v.split("/")[2]
+            if dotted == "vapi.std.localization_param":
+                # to avoid an endless loop with
+                # vapi.std.nested_localizable_message
+                return {"go_to": "vapi.std.localization_param"}
+            data = flatten_ref(definitions.get(dotted), definitions)
+            if "description" not in data and "description" in tree:
+                data["description"] = tree["description"]
+            return data
+        elif isinstance(v, dict):
+            tree[k] = flatten_ref(v, definitions)
+        else:
+            # Note: should never happen,
+            # corner case for appliance_infraprofile_configs_info
+            pass
+    return tree
+
+
 class Resource:
     def __init__(self, name):
         self.name = name
@@ -303,55 +350,30 @@ class AnsibleModuleBase:
         payload = {}
         for operationId in self.resource.operations:
             payload[operationId] = {"query": {}, "body": {}, "path": {}}
-            for parameter in AnsibleModule._flatten_parameter(
+            payload_info = {}
+            for parameter in AnsibleModule._property_to_parameter(
                 self.resource.operations[operationId][2], self.definitions
             ):
-                name = parameter["name"]
-                prefix = []
-                _in = parameter.get("in", "body")
+                _in = parameter["in"] or "body"
 
-                # We don't expose the "spec" dict in the module parameters
-                if parameter["type"] == "dict":
-                    if name == "spec":
-                        prefix.append(name)
-                    for i in parameter["subkeys"]:
-                        if i["type"] == "dict":
-                            sub_prefix = prefix + [i["name"]]
-                            payload[operationId][_in][i["name"]] = {}
-                            for j in i["subkeys"]:
-                                payload[operationId][_in][i["name"]][
-                                    j["name"]
-                                ] = "/".join(sub_prefix + [j["name"]])
-                        else:
-                            payload[operationId][_in][i["name"]] = "/".join(
-                                prefix + [i["name"]]
-                            )
+                if "subkeys" in parameter:
+                    payload_info = {
+                        k["name"]: k["_loc_in_payload"] for k in parameter["subkeys"]
+                    }
                 else:
-                    payload[operationId][_in][name] = parameter["name"]
-
+                    payload_info = parameter["_loc_in_payload"]
+                payload[operationId][_in][parameter["name"]] = payload_info
         return payload
 
     def parameters(self):
-        def itera(operationId):
-            for parameter in AnsibleModule._flatten_parameter(
-                self.resource.operations[operationId][2], self.definitions
-            ):
-                name = parameter["name"]
-
-                if name == "spec":
-                    for i in parameter["subkeys"]:
-                        yield i
-                else:
-                    yield parameter
 
         results = {}
         for operationId in self.default_operationIds:
             if operationId not in self.resource.operations:
                 continue
 
-            for parameter in sorted(
-                itera(operationId),
-                key=lambda item: (item["name"], item.get("description")),
+            for parameter in AnsibleModule._property_to_parameter(
+                self.resource.operations[operationId][2], self.definitions
             ):
                 name = parameter["name"]
                 if name not in results:
@@ -425,45 +447,86 @@ class AnsibleModuleBase:
 
     @staticmethod
     def _property_to_parameter(prop_struct, definitions):
+        properties = flatten_ref(prop_struct, definitions)
 
-        required_keys = prop_struct.get("required", [])
-        try:
-            properties = prop_struct["properties"]
-        except KeyError:
-            return prop_struct
+        def get_next(properties):
+            for i, v in enumerate(properties):
+                if "schema" in v:
+                    if "properties" in v["schema"]:
+                        properties[i] = v["schema"]["properties"]
+                        if "required" in v["schema"]:
+                            required_keys = v["schema"]["required"]
+                    elif "additionalProperties" in v["schema"]:
+                        properties[i] = v["schema"]["additionalProperties"][
+                            "properties"
+                        ]
 
-        for name, v in properties.items():
+            for i, v in enumerate(properties):
+                # appliance_health_messages
+                if isinstance(v, str):
+                    yield v, {}, [], []
+
+                elif "spec" in v and "properties" in v["spec"]:
+                    required_keys = []
+                    if "required" in v["spec"]:
+                        required_keys = v["spec"]["required"]
+                    for name, property in v["spec"]["properties"].items():
+                        yield name, property, ["spec"], name in required_keys
+
+                # appliance_networking_dns_hostname_info
+                elif "name" in v and isinstance(v["name"], dict):
+                    yield "name", v["name"], [], []
+                elif "name" in v:
+                    yield v["name"], v, [], v.get("required")
+                elif isinstance(v, dict):
+                    for k, data in v.items():
+                        yield k, data, [], data.get("required")
+
+        parameters = []
+
+        for name, v, parent, required in get_next(properties):
             parameter = {
                 "name": name,
                 "type": v.get("type", "str"),  # 'str' by default, should be ok
                 "description": v.get("description", ""),
-                "required": True if name in required_keys else False,
+                "required": required,
+                "_loc_in_payload": "/".join(parent + [name]),
+                "in": v.get("in"),
             }
+            if "enum" in v:
+                parameter["enum"] = v["enum"]
 
-            if "$ref" in v:
-                ref = definitions.get(v)
-                if "properties" in ref:
-                    unsorted_subkeys = AnsibleModule._property_to_parameter(
-                        definitions.get(v), definitions
-                    )
-                    parameter["type"] = "dict"
-                    subkeys = sorted(unsorted_subkeys, key=lambda item: item["name"])
-                    parameter["subkeys"] = list(subkeys)
-                else:
-                    for k, v in ref.items():
-                        parameter[k] = v
+            sub_items = None
+            if "properties" in v:
+                sub_items = v["properties"]
+            elif "items" in v and "properties" in v["items"]:
+                sub_items = v["items"]["properties"]
+            elif "items" in v and "name" not in v["items"]:
+                parameter["elements"] = v["items"].get("type", "str")
+            elif "items" in v and v["items"]["name"]:
+                sub_items = v["items"]
 
-            yield parameter
+            if sub_items:
+                subkeys = []
+                for sub_k, sub_v in sub_items.items():
+                    subkey = {
+                        "name": sub_k,
+                        "type": sub_v["type"],
+                        "description": sub_v.get("description", ""),
+                        "_loc_in_payload": "/".join(parent + [name] + [sub_k]),
+                    }
+                    if "enum" in sub_v:
+                        subkey["enum"] = sub_v["enum"]
+                    if "properties" in sub_v:
+                        subkey["properties"] = sub_v["properties"]
+                    subkeys.append(subkey)
+                # parameter["type"] = "dict"
+                parameter["subkeys"] = subkeys
+            parameters.append(parameter)
 
-    @staticmethod
-    def _flatten_parameter(parameter_structure, definitions):
-        for i in parameter_structure:
-            if "schema" in i:
-                schema = definitions.get(i["schema"])
-                for j in AnsibleModule._property_to_parameter(schema, definitions):
-                    yield j
-            else:
-                yield i
+        return sorted(
+            parameters, key=lambda item: (item["name"], item.get("description"))
+        )
 
     def renderer(self, target_dir):
         DEFAULT_MODULE = """
@@ -828,15 +891,25 @@ class Definitions:
         super().__init__()
         self.definitions = data
 
-    # e.g: #/definitions/com.vmware.vcenter.inventory.datastore_find
-    @staticmethod
-    def _ref_to_dotted(ref):
-        return ref["$ref"].split("/")[2]
-
     def get(self, ref):
-        dotted = self._ref_to_dotted(ref)
-        v = self.definitions[dotted]
-        return v
+        if isinstance(ref, dict):
+            # TODO: standardize the input to avoid this step
+            dotted = ref["$ref"].split("/")[2]
+        else:
+            dotted = ref
+
+        if dotted == "appliance.networking_change_task":
+            dotted = "appliance.networking_change$task"
+
+        try:
+            definition = self.definitions[dotted]
+        except KeyError:
+            definition = self.definitions["com.vmware." + dotted]
+
+        if definition is None:
+            raise Exception("Cannot find ref for {ref}")
+
+        return flatten_ref(definition, self.definitions)
 
 
 class Path:
@@ -890,6 +963,8 @@ class SwaggerFile:
         resources = {}
         for path in paths:
             name = path_to_name(path.path)
+            if name == "esx_settings_clusters_software_drafts":
+                continue
             if name not in resources:
                 resources[name] = Resource(name)
                 resources[name].description = ""  # path.summary(verb)
@@ -930,8 +1005,6 @@ def main():
     module_list = []
     p = pathlib.Path("7.0.0")
     # for json_file in p.glob("*.json"):
-    #     if str(json_file) == "7.0.0/appliance.json":
-    #         continue
     #     if str(json_file) == "7.0.0/api.json":
     #         continue
     for json_file in p.glob("vcenter.json"):
@@ -940,6 +1013,10 @@ def main():
         resources = swagger_file.init_resources(swagger_file.paths.values())
 
         for resource in resources.values():
+            # if resource.name != "vcenter_vm":
+            #     continue
+            if resource.name == "appliance_logging_forwarding":
+                continue
             if resource.name.startswith("vcenter_trustedinfrastructure"):
                 continue
             if "get" in resource.operations or "list" in resource.operations:
