@@ -31,7 +31,7 @@ documentation_data_expectation = {
         "aaa": {
             "description": [
                 "a second parameter",
-                "Validate attributes are:",
+                "Valide attributes are:",
                 " - C(a_subkey) (ccc): more blabla",
             ],
             "required": True,
@@ -392,7 +392,7 @@ options:
   aaa:
     description:
     - a second parameter
-    - 'Validate attributes are:'
+    - 'Valide attributes are:'
     - ' - C(a_subkey) (ccc): more blabla'
     required: true
     type: int
@@ -538,12 +538,6 @@ def test_SwaggerFile_init_resources():
     }
 
 
-def test_Definitions__ref_to_dotted():
-    ref = {"$ref": "#/definitions/vapi.std.errors.resource_inaccessible_error"}
-    dotted = "vapi.std.errors.resource_inaccessible_error"
-    assert rm.Definitions._ref_to_dotted(ref) == dotted
-
-
 # AnsibleModuleBase
 def test_AnsibleModuleBase():
     paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
@@ -612,15 +606,17 @@ def test_AnsibleInfoModule_parameters():
     assert module.name == "vcenter_vm_info"
     assert module.parameters() == [
         {
-            "collectionFormat": "multi",
+            "_loc_in_payload": "filter.vms",
             "description": "desc of multi",
+            "elements": "string",
             "in": "query",
-            "items": {"type": "string"},
             "name": "filter.vms",
             "operationIds": ["list"],
+            "required": None,
             "type": "array",
         },
         {
+            "_loc_in_payload": "vm",
             "description": "Id of the VM Required with I(state=['get'])",
             "in": "path",
             "name": "vm",
@@ -652,6 +648,7 @@ def test_AnsibleModule_parameters_complex():
     assert module.name == "vcenter_vmtemplate_libraryitems_checkouts"
     assert module.parameters() == [
         {
+            "_loc_in_payload": "action",
             "description": "action=check-out",
             "enum": ["check-in", "check-out"],
             "in": "query",
@@ -661,28 +658,35 @@ def test_AnsibleModule_parameters_complex():
             "type": "string",
         },
         {
+            "_loc_in_payload": "spec/message",
             "description": "Message describing the changes made to the virtual machine. "
             "Required with I(state=['check_in'])",
+            "in": None,
             "name": "message",
             "operationIds": ["check_in"],
             "required_if": ["check_in"],
             "type": "string",
         },
         {
+            "_loc_in_payload": "spec/name",
             "description": "Name of the virtual machine to check out of the library "
             "item.",
+            "in": None,
             "name": "name",
             "operationIds": ["check_out"],
             "required": False,
             "type": "string",
         },
         {
+            "_loc_in_payload": "spec/placement",
             "description": "Information used to place the checked out virtual machine.",
+            "in": None,
             "name": "placement",
             "operationIds": ["check_out"],
             "required": False,
             "subkeys": [
                 {
+                    "_loc_in_payload": "spec/placement/cluster",
                     "description": "Cluster onto which the virtual machine should "
                     "be placed. If {@name #cluster} and {@name "
                     "#resourcePool} are both specified, {@name "
@@ -691,17 +695,17 @@ def test_AnsibleModule_parameters_complex():
                     "specified, {@name #host} must be a member of "
                     "{@name #cluster}.",
                     "name": "cluster",
-                    "required": False,
                     "type": "string",
                 },
                 {
+                    "_loc_in_payload": "spec/placement/folder",
                     "description": "Virtual machine folder into which the virtual "
                     "machine should be placed.",
                     "name": "folder",
-                    "required": False,
                     "type": "string",
                 },
                 {
+                    "_loc_in_payload": "spec/placement/host",
                     "description": "Host onto which the virtual machine should be "
                     "placed. If {@name #host} and {@name "
                     "#resourcePool} are both specified, {@name "
@@ -710,22 +714,23 @@ def test_AnsibleModule_parameters_complex():
                     "specified, {@name #host} must be a member of "
                     "{@name #cluster}.",
                     "name": "host",
-                    "required": False,
                     "type": "string",
                 },
                 {
+                    "_loc_in_payload": "spec/placement/resource_pool",
                     "description": "Resource pool into which the virtual machine "
                     "should be placed.",
                     "name": "resource_pool",
-                    "required": False,
                     "type": "string",
                 },
             ],
-            "type": "dict",
+            "type": "object",
         },
         {
+            "_loc_in_payload": "spec/powered_on",
             "description": "Specifies whether the virtual machine should be powered on "
             "after check out.",
+            "in": None,
             "name": "powered_on",
             "operationIds": ["check_out"],
             "required": False,
@@ -733,8 +738,9 @@ def test_AnsibleModule_parameters_complex():
         },
         {"enum": ["check_in", "check_out"], "name": "state", "type": "str"},
         {
+            "_loc_in_payload": "template_library_item",
             "description": "Identifier of the content library item containing the source "
-            + "virtual machine template to be checked out.",
+            "virtual machine template to be checked out.",
             "in": "path",
             "name": "template_library_item",
             "operationIds": ["check_in", "check_out"],
@@ -742,6 +748,7 @@ def test_AnsibleModule_parameters_complex():
             "type": "string",
         },
         {
+            "_loc_in_payload": "vm",
             "description": "Identifier of the virtual machine to check into the library "
             "item. Required with I(state=['check_in'])",
             "in": "path",
