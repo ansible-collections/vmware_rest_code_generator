@@ -359,9 +359,15 @@ class AnsibleModuleBase:
         return payload
 
     def parameters(self):
+        def sort_operationsid(input):
+            output = sorted(input)
+            if "create" in output:
+                output = ["create"] + output
+            return output
 
         results = {}
-        for operationId in self.default_operationIds:
+
+        for operationId in sort_operationsid(self.default_operationIds):
             if operationId not in self.resource.operations:
                 continue
 
