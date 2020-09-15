@@ -15,7 +15,7 @@ my_parameters = [
     },
     {
         "name": "ccc",
-        "type": "list",
+        "type": "str",
         "description": "3rd parameter is ':' enum,\n\nand this string is long and comes with a ' on purpose. This way, we can use it to ensure format_documentation() can break it up.",
         "enum": ["a", "c", "b"],
     },
@@ -46,8 +46,7 @@ documentation_data_expectation = {
                 "ensure format_documentation() can break "
                 "it up.",
             ],
-            "elements": "str",
-            "type": "list",
+            "type": "str",
         },
         "vcenter_hostname": {
             "description": [
@@ -405,8 +404,7 @@ options:
     - '3rd parameter is : enum,'
     - and this string is long and comes with a ' on purpose. This way, we can use
       it to ensure format_documentation() can break it up.
-    elements: str
-    type: list
+    type: str
   vcenter_hostname:
     description:
     - The hostname or IP address of the vSphere vCenter
@@ -478,7 +476,7 @@ def test_gen_arguments_py(monkeypatch):
         == """
 argument_spec['aaa'] = {'type': 'bool'}
 argument_spec['aaa'] = {'required': True, 'type': 'int'}
-argument_spec['ccc'] = {'type': 'list', 'choices': ['a', 'b', 'c'], 'elements': 'str'}"""
+argument_spec['ccc'] = {'type': 'str', 'choices': ['a', 'b', 'c']}"""
     )
 
 
@@ -584,12 +582,7 @@ def test_AnsibleInfoModule_payload():
         "check_out": {
             "body": {
                 "name": "spec/name",
-                "placement": {
-                    "cluster": "spec/placement/cluster",
-                    "folder": "spec/placement/folder",
-                    "host": "spec/placement/host",
-                    "resource_pool": "spec/placement/resource_pool",
-                },
+                "placement": "spec/placement",
                 "powered_on": "spec/powered_on",
             },
             "path": {"template_library_item": "template_library_item"},
@@ -680,13 +673,13 @@ def test_AnsibleModule_parameters_complex():
         {
             "_loc_in_payload": "spec/placement",
             "description": "Information used to place the checked out virtual machine.",
+            "elements": "dict",
             "in": None,
             "name": "placement",
             "operationIds": ["check_out"],
             "required": False,
             "subkeys": [
                 {
-                    "_loc_in_payload": "spec/placement/cluster",
                     "description": "Cluster onto which the virtual machine should "
                     "be placed. If {@name #cluster} and {@name "
                     "#resourcePool} are both specified, {@name "
@@ -698,14 +691,12 @@ def test_AnsibleModule_parameters_complex():
                     "type": "string",
                 },
                 {
-                    "_loc_in_payload": "spec/placement/folder",
                     "description": "Virtual machine folder into which the virtual "
                     "machine should be placed.",
                     "name": "folder",
                     "type": "string",
                 },
                 {
-                    "_loc_in_payload": "spec/placement/host",
                     "description": "Host onto which the virtual machine should be "
                     "placed. If {@name #host} and {@name "
                     "#resourcePool} are both specified, {@name "
@@ -717,7 +708,6 @@ def test_AnsibleModule_parameters_complex():
                     "type": "string",
                 },
                 {
-                    "_loc_in_payload": "spec/placement/resource_pool",
                     "description": "Resource pool into which the virtual machine "
                     "should be placed.",
                     "name": "resource_pool",

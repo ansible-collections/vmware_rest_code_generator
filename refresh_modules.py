@@ -103,9 +103,7 @@ def gen_documentation(name, description, parameters):
     for parameter in parameters:
         normalized_name = normalize_parameter_name(parameter["name"])
         description = []
-        option = {
-            "type": parameter["type"],
-        }
+        option = {}
         if parameter.get("required"):
             option["required"] = True
         if parameter.get("description"):
@@ -133,11 +131,11 @@ def gen_documentation(name, description, parameters):
                                 description.append(f"       - C({val})")
 
         option["description"] = list(normalize_description(description))
-        option["type"] = python_type(option["type"])
+        option["type"] = python_type(parameter["type"])
         if "enum" in parameter:
             option["choices"] = sorted(parameter["enum"])
-        if option["type"] == "list":
-            option["elements"] = "str"
+        if "elements" in parameter:
+            option["elements"] = python_type(parameter["elements"])
         if parameter.get("default"):
             option["default"] = parameter.get("default")
 
@@ -243,7 +241,7 @@ def gen_arguments_py(parameters, list_index=None):
         if "enum" in parameter:
             _add_key(assign, "choices", sorted(parameter["enum"]))
         if python_type(parameter["type"]) == "list":
-            _add_key(assign, "elements", "str")
+            _add_key(assign, "elements", python_type(parameter["elements"]))
 
         if "default" in parameter:
             _add_key(assign, "default", parameter["default"])
@@ -356,12 +354,7 @@ class AnsibleModuleBase:
             ):
                 _in = parameter["in"] or "body"
 
-                if "subkeys" in parameter:
-                    payload_info = {
-                        k["name"]: k["_loc_in_payload"] for k in parameter["subkeys"]
-                    }
-                else:
-                    payload_info = parameter["_loc_in_payload"]
+                payload_info = parameter["_loc_in_payload"]
                 payload[operationId][_in][parameter["name"]] = payload_info
         return payload
 
@@ -513,15 +506,14 @@ class AnsibleModuleBase:
                         "name": sub_k,
                         "type": sub_v["type"],
                         "description": sub_v.get("description", ""),
-                        "_loc_in_payload": "/".join(parent + [name] + [sub_k]),
                     }
                     if "enum" in sub_v:
                         subkey["enum"] = sub_v["enum"]
                     if "properties" in sub_v:
                         subkey["properties"] = sub_v["properties"]
                     subkeys.append(subkey)
-                # parameter["type"] = "dict"
                 parameter["subkeys"] = subkeys
+                parameter["elements"] = "dict"
             parameters.append(parameter)
 
         return sorted(
