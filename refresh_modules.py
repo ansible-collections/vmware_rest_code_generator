@@ -367,6 +367,24 @@ class AnsibleModuleBase:
 
         results = {}
 
+        def ansible_state(operationids):
+            mapping = {
+                "update": "present",
+                "delete": "absent",
+                "create": "present",
+            }
+            final = []
+            for o in operationids:
+                # in this case, we don't want to see 'create' in the
+                # "Required with" list
+                if o == "update" and "create" not in operationids:
+                    continue
+                if o in mapping:
+                    final.append(mapping[o])
+                else:
+                    final.append(o)
+            return sorted(set(final))
+
         for operationId in sort_operationsid(self.default_operationIds):
             if operationId not in self.resource.operations:
                 continue
@@ -409,10 +427,10 @@ class AnsibleModuleBase:
                     > 0
                 ):
                     result["description"] += " Required with I(state={})".format(
-                        sorted(set(result["operationIds"]))
+                        ansible_state(result["operationIds"])
                     )
                 del result["required"]
-                result["required_if"] = sorted(set(result["operationIds"]))
+                result["required_if"] = ansible_state(result["operationIds"])
 
         states = []
         for operation in sorted(list(self.default_operationIds)):
