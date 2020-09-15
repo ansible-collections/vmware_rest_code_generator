@@ -134,7 +134,7 @@ def gen_documentation(name, description, parameters):
         option["type"] = python_type(parameter["type"])
         if "enum" in parameter:
             option["choices"] = sorted(parameter["enum"])
-        if "elements" in parameter:
+        if parameter["type"] == "array":
             option["elements"] = python_type(parameter["elements"])
         if parameter.get("default"):
             option["default"] = parameter.get("default")
