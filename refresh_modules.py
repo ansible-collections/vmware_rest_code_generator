@@ -358,6 +358,17 @@ class AnsibleModuleBase:
                 payload[operationId][_in][parameter["name"]] = payload_info
         return payload
 
+    def answer(self):
+        try:
+            raw_answer = flatten_ref(
+                self.resource.operations["get"][3]["200"], self.definitions
+            )
+            fields = raw_answer["schema"]["properties"]["value"]["properties"]
+        except KeyError:
+            return
+
+        return fields
+
     def parameters(self):
         def sort_operationsid(input):
             output = sorted(input)
@@ -417,6 +428,12 @@ class AnsibleModuleBase:
 
                 results[name]["operationIds"].append(operationId)
                 results[name]["operationIds"].sort()
+
+        answer_fields = self.answer()
+        # Note: If the final result comes with a "label" field, we expose a "label"
+        # parameter. We will use the field to identify an existing resource.
+        if answer_fields and "label" in answer_fields:
+            results["label"] = {"type": "str", "name": "label"}
 
         for name, result in results.items():
             if result.get("enum"):
@@ -567,6 +584,7 @@ try:
 except ImportError:
     from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.vmware.vmware_rest.plugins.module_utils.vmware_rest import (
+    build_full_device_list,
     exists,
     gen_args,
     get_device_info,
@@ -684,7 +702,7 @@ async def entry_point(module, session):
         main_func = ast.parse(MAIN_FUNC.format(name=self.name))
 
         for operation in sorted(self.default_operationIds):
-            (verb, path, _) = self.resource.operations[operation]
+            (verb, path, _, _) = self.resource.operations[operation]
             if not path.startswith("/rest"):  # TODO
                 path = "/rest" + path
             if "$" in operation:
@@ -777,7 +795,7 @@ async def _update(params, session):
             FUNC_WITH_DATA_CREATE_TPL = """
 async def _create(params, session):
     if params["{list_index}"]:
-        _json = await get_device_info(params, session, build_url(params), params["{list_index}"])
+        _json = await get_device_info(session, build_url(params), params["{list_index}"])
     else:
         _json = await exists(params, session, build_url(params), ["{list_index}"])
     if _json:
@@ -803,7 +821,7 @@ async def _create(params, session):
                 _id = list(_json["value"].values())[0]
             else:
                 _id = _json["value"]
-            _json = await get_device_info(params, session, _url, _id)
+            _json = await get_device_info(session, _url, _id)
 
         return await update_changed_flag(_json, resp.status, "{operation}")
 """
@@ -892,10 +910,22 @@ return (
     def gen_entry_point_func(self):
         FUNC = """
 async def entry_point(module, session):
-    async with session.get(build_url(module.params)) as resp:
+    url = build_url(module.params)
+    async with session.get(url) as resp:
         _json = await resp.json()
         if module.params.get("{list_index}"):
             _json["id"] = module.params.get("{list_index}")
+        elif module.params.get("label"):  # TODO extend the list of filter
+            _json = await exists(module.params, session, url)
+        else: # list context, retrieve the details of each entry
+            try:
+                if isinstance(_json["value"][0]["{list_index}"], str) and len(list(_json["value"][0].values())) == 1:
+                    # this is a list of id, we fetch the details
+                    full_device_list = await build_full_device_list(session, url, _json)
+                    _json = {{"value": [i["value"] for i in full_device_list]}}
+            except (KeyError, IndexError):
+                pass
+
         return await update_changed_flag(_json, resp.status, "get")
 """
         template = FUNC if self.list_index() else FUNC
@@ -971,6 +1001,7 @@ class SwaggerFile:
                     verb,
                     path.path,
                     desc["parameters"],
+                    desc["responses"],
                 )
         return result
 
