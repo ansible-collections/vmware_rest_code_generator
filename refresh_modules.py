@@ -322,6 +322,8 @@ class AnsibleModuleBase:
             "vcenter_vm_guest_power",
             "vcenter_vm_guest_power_info",
             "vcenter_vm_hardware_action_upgrade",  # vm_hardware already allow the version upgrade
+            "vcenter_vm_tools_installer",  # does not work
+            "vcenter_vm_tools_installer_info",
         ]:
             return False
 
@@ -997,6 +999,10 @@ class SwaggerFile:
                 result[path.path] = path
             for verb, desc in path.value.items():
                 operationId = desc["operationId"]
+                if path.path.startswith("/rest/vcenter/vm/{vm}/tools"):
+                    if operationId == "upgrade":
+                        print(f"Skipping {path.path} upgrade (broken)")
+                        continue
                 path.operations[operationId] = (
                     verb,
                     path.path,
