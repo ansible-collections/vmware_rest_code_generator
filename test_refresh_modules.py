@@ -496,7 +496,19 @@ def test_SwaggerFile_load_paths():
                     "type": "array",
                 }
             ],
-        )
+            {
+                "200": {
+                    "description": "A list",
+                    "schema": {"$ref": "#/definitions/vcenter.VM.list_resp"},
+                },
+                "400": {
+                    "description": "my 400 error",
+                    "schema": {
+                        "$ref": "#/definitions/vapi.std.errors.unable_to_allocate_resource_error"
+                    },
+                },
+            },
+        ),
     }
 
 
@@ -518,6 +530,18 @@ def test_SwaggerFile_init_resources():
                     "type": "string",
                 }
             ],
+            {
+                "200": {
+                    "description": "Information about the VM.",
+                    "schema": {"$ref": "#/definitions/vcenter.VM_resp"},
+                },
+                "400": {
+                    "description": "things went bad.",
+                    "schema": {
+                        "$ref": "#/definitions/vapi.std.errors.resource_inaccessible_error"
+                    },
+                },
+            },
         ),
         "list": (
             "get",
@@ -532,6 +556,18 @@ def test_SwaggerFile_init_resources():
                     "type": "array",
                 }
             ],
+            {
+                "200": {
+                    "description": "A list",
+                    "schema": {"$ref": "#/definitions/vcenter.VM.list_resp"},
+                },
+                "400": {
+                    "description": "my 400 error",
+                    "schema": {
+                        "$ref": "#/definitions/vapi.std.errors.unable_to_allocate_resource_error"
+                    },
+                },
+            },
         ),
     }
 
