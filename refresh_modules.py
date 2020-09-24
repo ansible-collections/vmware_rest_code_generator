@@ -696,6 +696,9 @@ DOCUMENTATION = {documentation}
 EXAMPLES = \"\"\"
 \"\"\"
 
+RETURN = \"\"\"
+\"\"\"
+
 # This structure describes the format of the data expected by the end-points
 PAYLOAD_FORMAT = {payload_format}
 
