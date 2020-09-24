@@ -20,13 +20,74 @@ def normalize_parameter_name(name):
 
 
 def normalize_description(string_list):
-    def _transform(my_list):
-        for i in my_list:
-            if not i:
-                continue
-            i = i.replace(" {@term enumerated type}", "")
-            i = re.sub(r"{@name DayOfWeek}", "day of the week", i)
-            yield i
+    def clean_up(my_string):
+        my_string = my_string.replace(" {@term enumerated type}", "")
+        my_string = re.sub(r"{@name DayOfWeek}", "day of the week", my_string)
+        my_string = re.sub(r": The\s\S+\senumerated type", ": This option", my_string)
+        return my_string
+
+    def ref_to_parameter(ref):
+        splitted = ref.split(".")
+        my_parameter = splitted[-1].replace("-", "_")
+        return re.sub(r"(?<!^)(?=[A-Z])", "_", my_parameter).lower()
+
+    def write_I(my_string):
+        refs = {
+            ref_to_parameter(i): i
+            for i in re.findall(r"[A-Z][\w+]+\.[A-Z][\w+\.-]+", my_string)
+        }
+        for parameter_name in sorted(refs.keys(), key=len, reverse=True):
+            ref = refs[parameter_name]
+            my_string = my_string.replace(ref, f"I({parameter_name})")
+        return my_string
+
+    def write_M(my_string):
+        my_string = re.sub(r"When operations return.*\.($|\s)", "", my_string)
+
+        m = re.search(r"resource type:\s([a-zA-Z][\w\.]+[a-z])", my_string)
+        mapping = {
+            "ClusterComputeResource": "vcenter_cluster_info",
+            "Datacenter": "vcenter_datacenter_info",
+            "Datastore": "vcenter_datastore_info",
+            "Folder": "vcenter_folder_info",
+            "HostSystem": "vcenter_host_info",
+            "Network": "vcenter_network_info",
+            "ResourcePool": "vcenter_resourcepool_info",
+            "vcenter.StoragePolicy": "vcenter_storage_policies",
+            "vcenter.vm.hardware.Cdrom": "vcenter_vm_hardware_cdrom",
+            "vcenter.vm.hardware.Disk": "vcenter_vm_hardware_disk",
+            "vcenter.vm.hardware.Ethernet": "vcenter_vm_hardware_ethernet",
+            "vcenter.vm.hardware.Floppy": "vcenter_vm_hardware_floppy",
+            "vcenter.vm.hardware.ParallelPort": "vcenter_vm_hardware_parallel",
+            "vcenter.vm.hardware.SataAdapter": "vcenter_vm_hardware_adapter_sata",
+            "vcenter.vm.hardware.ScsiAdapter": "vcenter_vm_hardware_adapter_scsi",
+            "vcenter.vm.hardware.SerialPort": "vcenter_vm_hardware_serial",
+            "VirtualMachine": "vcenter_vm_info",
+        }
+
+        if m:
+            resource_name = m.group(1)
+            try:
+                module_name = mapping[resource_name]
+            except KeyError:
+                print(f"No mapping for {resource_name}")
+                raise
+
+            if (
+                f"must be an identifier for the resource type: {resource_name}"
+                in my_string
+            ):
+                return my_string.replace(
+                    f"must be an identifier for the resource type: {resource_name}",
+                    f"must be the id of a resource returned by M({module_name})",
+                )
+            elif f"identifiers for the resource type: {resource_name}" in my_string:
+                return my_string.replace(
+                    f"identifiers for the resource type: {resource_name}",
+                    f"the id of resources returned by M({module_name})",
+                )
+        else:
+            return my_string
 
     if not isinstance(string_list, list):
         raise TypeError
@@ -38,7 +99,10 @@ def normalize_description(string_list):
         else:
             with_no_line_break.append(l)
 
-    return list(_transform(with_no_line_break))
+    with_no_line_break = [write_M(i) for i in with_no_line_break]
+    with_no_line_break = [write_I(i) for i in with_no_line_break]
+    with_no_line_break = [clean_up(i) for i in with_no_line_break]
+    return with_no_line_break
 
 
 def python_type(value):
@@ -302,8 +366,61 @@ class AnsibleModuleBase:
         self.resource = resource
         self.definitions = definitions
         self.name = resource.name
-        self.description = "Handle resource of type {name}".format(name=resource.name)
         self.default_operationIds = None
+
+    def description(self):
+        m = re.match("vcenter_vm_hardware_adapter_(.*)_info", self.name)
+        if m:
+            vm_resource = m.group(1).upper()
+            return f"Collect the {vm_resource} adapter information from a VM"
+
+        m = re.match("vcenter_vm_hardware_adapter_(.*)", self.name)
+        if m:
+            vm_resource = m.group(1).upper()
+            return f"Manage the {vm_resource} adapter of a VM"
+
+        m = re.match("vcenter_vm_hardware_(.*)_info", self.name)
+        if m:
+            vm_resource = m.group(1).replace("_", " ")
+            return f"Collect the {vm_resource} information from a VM"
+
+        m = re.match("vcenter_vm_hardware_(.*)", self.name)
+        if m:
+            vm_resource = m.group(1).replace("_", " ")
+            return f"Manage the {vm_resource} of a VM"
+
+        m = re.match("vcenter_vm_(guest_.*)_info", self.name)
+        if m:
+            vm_resource = m.group(1).replace("_", " ")
+            return f"Collect the {vm_resource} information"
+
+        m = re.match("vcenter_vm_(guest_.*)", self.name)
+        if m:
+            vm_resource = m.group(1).replace("_", " ")
+            return f"Manage the {vm_resource}"
+
+        m = re.match("vcenter_vm_(.*)info", self.name)
+        if m:
+            vm_resource = m.group(1).replace("_", " ")
+            return f"Collect the {vm_resource} information from a VM"
+
+        m = re.match("vcenter_vm_(.*)", self.name)
+        if m:
+            vm_resource = m.group(1).replace("_", " ")
+            return f"Manage the {vm_resource} of a VM"
+
+        m = re.match("vcenter_(.*)_info", self.name)
+        if m:
+            vm_resource = m.group(1).replace("_", " ")
+            return f"Collect the information associated with the vCenter {vm_resource}s"
+
+        m = re.match("vcenter_(.*)", self.name)
+        if m:
+            vm_resource = m.group(1).replace("_", " ")
+            return f"Manage the {vm_resource} of a vCenter"
+
+        print(f"generic description: {self.name}")
+        return f"Handle resource of type {self.name}"
 
     def is_trusted(self):
         trusted_module_allowlist = [
@@ -653,7 +770,7 @@ if __name__ == '__main__':
 """
         arguments = gen_arguments_py(self.parameters(), self.list_index())
         documentation = format_documentation(
-            gen_documentation(self.name, self.description, self.parameters())
+            gen_documentation(self.name, self.description(), self.parameters())
         )
         url_func = self.gen_url_func()
         entry_point_func = self.gen_entry_point_func()

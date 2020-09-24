@@ -10,7 +10,7 @@ my_parameters = [
         "name": "aaa",
         "type": "integer",
         "required": True,
-        "description": "a second parameter",
+        "description": "a second parameter. the field must contain identifiers for the resource type: vcenter.vm.hardware.Disk.",
         "subkeys": [{"type": "ccc", "name": "a_subkey", "description": "more blabla"}],
     },
     {
@@ -30,7 +30,9 @@ documentation_data_expectation = {
     "options": {
         "aaa": {
             "description": [
-                "a second parameter",
+                "a second parameter. the field must "
+                "contain the id of resources returned by "
+                "M(vcenter_vm_hardware_disk).",
                 "Valide attributes are:",
                 " - C(a_subkey) (ccc): more blabla",
             ],
@@ -41,6 +43,7 @@ documentation_data_expectation = {
             "choices": ["a", "b", "c"],
             "description": [
                 "3rd parameter is ':' enum,",
+                "",
                 "and this string is long and comes with a "
                 "' on purpose. This way, we can use it to "
                 "ensure format_documentation() can break "
@@ -342,6 +345,12 @@ def test_normalize_description():
     assert rm.normalize_description(["a", "b"]) == ["a", "b"]
     assert rm.normalize_description(["{@name DayOfWeek}"]) == ["day of the week"]
     assert rm.normalize_description([" {@term enumerated type}"]) == [""]
+    assert rm.normalize_description(
+        ["increased if Cpu.Info.hot-add-enabled is true"]
+    ) == ["increased if I(hot_add_enabled) is true"]
+    assert rm.normalize_description(["Aa.Rather Aa.RatherLonger Aa.RatherSmaller"]) == [
+        "I(rather) I(rather_longer) I(rather_smaller)"
+    ]
 
 
 def test_python_type():
@@ -390,7 +399,7 @@ description: bar
 options:
   aaa:
     description:
-    - a second parameter
+    - a second parameter. the field must contain the id of resources returned by M(vcenter_vm_hardware_disk).
     - 'Valide attributes are:'
     - ' - C(a_subkey) (ccc): more blabla'
     required: true
@@ -402,6 +411,7 @@ options:
     - c
     description:
     - '3rd parameter is : enum,'
+    - ''
     - and this string is long and comes with a ' on purpose. This way, we can use
       it to ensure format_documentation() can break it up.
     type: str
@@ -762,7 +772,12 @@ def test_AnsibleModule_parameters_complex():
             "required": False,
             "type": "boolean",
         },
-        {"enum": ["check_in", "check_out"], "name": "state", "type": "str"},
+        {
+            "enum": ["check_in", "check_out"],
+            "name": "state",
+            "type": "str",
+            "required": True,
+        },
         {
             "_loc_in_payload": "template_library_item",
             "description": "Identifier of the content library item containing the source "
