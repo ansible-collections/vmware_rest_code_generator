@@ -316,6 +316,7 @@ class AnsibleModuleBase:
             "vcenter_host",
             "vcenter_network_info",
             "vcenter_vm($|_.+)",
+            "vcenter_storage_policies",
         ]
         if self.name in [
             "vcenter_vm_guest_customization",
@@ -324,6 +325,7 @@ class AnsibleModuleBase:
             "vcenter_vm_hardware_action_upgrade",  # vm_hardware already allow the version upgrade
             "vcenter_vm_tools_installer",  # does not work
             "vcenter_vm_tools_installer_info",
+            "vcenter_vm_storage_policy_compliance",  # does not work, returns 404
         ]:
             return False
 
