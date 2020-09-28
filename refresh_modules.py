@@ -19,21 +19,41 @@ def normalize_parameter_name(name):
     return name.replace("filter.", "filter_")
 
 
-def normalize_description(string_list):
-    def clean_up(my_string):
+class Description:
+    @classmethod
+    def normalize(cls, string_list):
+        if not isinstance(string_list, list):
+            raise TypeError
+
+        with_no_line_break = []
+        for l in string_list:
+            if "\n" in l:
+                with_no_line_break += l.split("\n")
+            else:
+                with_no_line_break.append(l)
+
+        with_no_line_break = [cls.write_M(i) for i in with_no_line_break]
+        with_no_line_break = [cls.write_I(i) for i in with_no_line_break]
+        with_no_line_break = [cls.clean_up(i) for i in with_no_line_break]
+        return with_no_line_break
+
+    @classmethod
+    def clean_up(cls, my_string):
         my_string = my_string.replace(" {@term enumerated type}", "")
         my_string = re.sub(r"{@name DayOfWeek}", "day of the week", my_string)
         my_string = re.sub(r": The\s\S+\senumerated type", ": This option", my_string)
         return my_string
 
-    def ref_to_parameter(ref):
+    @classmethod
+    def ref_to_parameter(cls, ref):
         splitted = ref.split(".")
         my_parameter = splitted[-1].replace("-", "_")
         return re.sub(r"(?<!^)(?=[A-Z])", "_", my_parameter).lower()
 
-    def write_I(my_string):
+    @classmethod
+    def write_I(cls, my_string):
         refs = {
-            ref_to_parameter(i): i
+            cls.ref_to_parameter(i): i
             for i in re.findall(r"[A-Z][\w+]+\.[A-Z][\w+\.-]+", my_string)
         }
         for parameter_name in sorted(refs.keys(), key=len, reverse=True):
@@ -41,7 +61,8 @@ def normalize_description(string_list):
             my_string = my_string.replace(ref, f"I({parameter_name})")
         return my_string
 
-    def write_M(my_string):
+    @classmethod
+    def write_M(cls, my_string):
         my_string = re.sub(r"When operations return.*\.($|\s)", "", my_string)
 
         m = re.search(r"resource type:\s([a-zA-Z][\w\.]+[a-z])", my_string)
@@ -88,21 +109,6 @@ def normalize_description(string_list):
                 )
         else:
             return my_string
-
-    if not isinstance(string_list, list):
-        raise TypeError
-
-    with_no_line_break = []
-    for l in string_list:
-        if "\n" in l:
-            with_no_line_break += l.split("\n")
-        else:
-            with_no_line_break.append(l)
-
-    with_no_line_break = [write_M(i) for i in with_no_line_break]
-    with_no_line_break = [write_I(i) for i in with_no_line_break]
-    with_no_line_break = [clean_up(i) for i in with_no_line_break]
-    return with_no_line_break
 
 
 def python_type(value):
@@ -194,7 +200,7 @@ def gen_documentation(name, description, parameters):
                             for val in v.get("enum"):
                                 description.append(f"       - C({val})")
 
-        option["description"] = list(normalize_description(description))
+        option["description"] = list(Description.normalize(description))
         option["type"] = python_type(parameter["type"])
         if "enum" in parameter:
             option["choices"] = sorted(parameter["enum"])

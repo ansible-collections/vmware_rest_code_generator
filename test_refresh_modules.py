@@ -341,16 +341,20 @@ my_definitions = {
 }
 
 
-def test_normalize_description():
-    assert rm.normalize_description(["a", "b"]) == ["a", "b"]
-    assert rm.normalize_description(["{@name DayOfWeek}"]) == ["day of the week"]
-    assert rm.normalize_description([" {@term enumerated type}"]) == [""]
-    assert rm.normalize_description(
+def test_description_normalize():
+    assert rm.Description.normalize(["a", "b"]) == ["a", "b"]
+    assert rm.Description.normalize(["{@name DayOfWeek}"]) == ["day of the week"]
+    assert rm.Description.normalize([" {@term enumerated type}"]) == [""]
+    assert rm.Description.normalize(
         ["increased if Cpu.Info.hot-add-enabled is true"]
     ) == ["increased if I(hot_add_enabled) is true"]
-    assert rm.normalize_description(["Aa.Rather Aa.RatherLonger Aa.RatherSmaller"]) == [
+    assert rm.Description.normalize(["Aa.Rather Aa.RatherLonger Aa.RatherSmaller"]) == [
         "I(rather) I(rather_longer) I(rather_smaller)"
     ]
+
+
+def test_description_ref_to_parameter():
+    assert rm.Description.ref_to_parameter("Abb.Bccc.Ccc-aaa-eee") == "ccc_aaa_eee"
 
 
 def test_python_type():
@@ -388,6 +392,11 @@ def test_gen_documentation():
         rm.gen_documentation("foo", "bar", my_parameters)
         == documentation_data_expectation
     )
+
+
+def test_python_type():
+    assert rm.python_type("object") == "dict"
+    assert rm.python_type("string") == "str"
 
 
 def test_format_documentation():
