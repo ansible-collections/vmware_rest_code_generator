@@ -162,6 +162,14 @@ def gen_documentation(name, description, parameters):
                 "type": "bool",
                 "default": True,
             },
+            "vcenter_rest_log_file": {
+                "description": [
+                    "You can use this optional parameter to set the location of a log file. ",
+                    "This file will be used to record the HTTP REST interaction. ",
+                    "The file will be stored on the host that run the module. ",
+                ],
+                "type": "str",
+            },
         },
         "requirements": ["python >= 3.6", "aiohttp"],
         "short_description": description,
@@ -753,6 +761,11 @@ def prepare_argument_spec():
             required=False,
             default=True,
             fallback=(env_fallback, ['VMWARE_VALIDATE_CERTS']),
+        ),
+        "vcenter_rest_log_file": dict(
+            type='str',
+            required=False,
+            fallback=(env_fallback, ['VMWARE_REST_LOG_FILE']),
         )
     }}
 
@@ -763,7 +776,7 @@ def prepare_argument_spec():
 async def main( ):
     module_args = prepare_argument_spec()
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
-    session = await open_session(vcenter_hostname=module.params['vcenter_hostname'], vcenter_username=module.params['vcenter_username'], vcenter_password=module.params['vcenter_password'])
+    session = await open_session(vcenter_hostname=module.params['vcenter_hostname'], vcenter_username=module.params['vcenter_username'], vcenter_password=module.params['vcenter_password'], log_file=module.params['vcenter_rest_log_file'])
     result = await entry_point(module, session)
     module.exit_json(**result)
 
