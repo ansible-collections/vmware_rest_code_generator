@@ -15,13 +15,14 @@ def _task_to_string(task):
     return a.read().rstrip()
 
 
-def get_tasks(target_dir, scenario):
-    task_dir = target_dir / "tests" / "integration" / "targets" / scenario / "tasks"
+def get_tasks(target_dir, *scenarios):
     tasks = []
-    for _file in task_dir.glob("*"):
-        yaml = ruamel.yaml.YAML()
-        yaml.indent(sequence=4, offset=2)
-        tasks += yaml.load(_file.open())
+    for scenario in scenarios:
+        task_dir = target_dir / "tests" / "integration" / "targets" / scenario / "tasks"
+        for _file in task_dir.glob("*"):
+            yaml = ruamel.yaml.YAML()
+            yaml.indent(sequence=4, offset=2)
+            tasks += yaml.load(_file.open())
     return tasks
 
 
@@ -151,7 +152,7 @@ def main():
         help="location of the target repository (default: ./vmware_rest)",
     )
     args = parser.parse_args()
-    tasks = get_tasks(args.target_dir, "vcenter_vm_scenario1")
+    tasks = get_tasks(args.target_dir, "vcenter_vm_scenario1", "prepare_lab")
     extracted_examples = extract(tasks)
     inject(args.target_dir, extracted_examples)
 
