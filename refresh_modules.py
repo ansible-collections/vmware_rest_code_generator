@@ -576,7 +576,11 @@ class AnsibleModuleBase:
                 result["enum"] = sorted(set(result["enum"]))
             if result.get("required"):
                 if (
-                    len(set(self.default_operationIds) - set(result["operationIds"]))
+                    len(
+                        set(self.default_operationIds)
+                        - set(result["operationIds"])
+                        - set(["list", "get"])
+                    )
                     > 0
                 ):
                     result["description"] += " Required with I(state={})".format(
@@ -597,7 +601,7 @@ class AnsibleModuleBase:
         results["state"] = {
             "name": "state",
             "type": "str",
-            "enum": sorted(list(states)),
+            "enum": sorted(set(states)),
         }
         if "present" in states:
             results["state"]["default"] = "present"
