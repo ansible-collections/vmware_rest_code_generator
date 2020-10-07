@@ -1236,20 +1236,31 @@ def main():
 
     ignore_dir = args.target_dir / "tests" / "sanity"
     ignore_dir.mkdir(parents=True, exist_ok=True)
-    ignore_file = ignore_dir / "ignore-2.10.txt"
+    ignore_content = "plugins/module_utils/vmware_rest.py compile-2.6!skip\n"
+    ignore_content += "plugins/module_utils/vmware_rest.py compile-2.7!skip\n"
+    ignore_content += "plugins/module_utils/vmware_rest.py compile-3.5!skip\n"
+    ignore_content += "plugins/module_utils/vmware_rest.py import-3.5!skip\n"
+    ignore_content += "plugins/module_utils/vmware_rest.py metaclass-boilerplate!skip\n"
+    ignore_content += (
+        "plugins/module_utils/vmware_rest.py future-import-boilerplate!skip\n"
+    )
     files = ["plugins/modules/{}.py".format(module) for module in module_list]
-    with ignore_file.open("w") as fd:
-        for f in files:
-            for test in [
-                "compile-2.6!skip",  # Py3.6+
-                "compile-2.7!skip",  # Py3.6+
-                "compile-3.5!skip",  # Py3.6+
-                "future-import-boilerplate!skip",  # Py2 only
-                "metaclass-boilerplate!skip",  # Py2 only
-                "validate-modules:missing-if-name-main",
-                "validate-modules:missing-main-call",  # there is an async main()
-            ]:
-                fd.write("{f} {test}\n".format(f=f, test=test))
+    for f in files:
+        for test in [
+            "compile-2.6!skip",  # Py3.6+
+            "compile-2.7!skip",  # Py3.6+
+            "compile-3.5!skip",  # Py3.6+
+            "import-3.5!skip",  # Py3.6+
+            "future-import-boilerplate!skip",  # Py2 only
+            "metaclass-boilerplate!skip",  # Py2 only
+            "validate-modules:missing-if-name-main",
+            "validate-modules:missing-main-call",  # there is an async main()
+        ]:
+            ignore_content += f"{f} {test}\n"
+
+    for version in ["2.9", "2.10"]:
+        ignore_file = ignore_dir / f"ignore-{version}.txt"
+        ignore_file.write_text(ignore_content)
 
     dev_md = args.target_dir / "dev.md"
     dev_md.write_text(
