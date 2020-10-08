@@ -22,7 +22,7 @@ my_parameters = [
 ]
 
 
-documentation_data_expectation = {
+documentation_data_input = {
     "author": ["Goneri Le Bouder (@goneri) <goneri@lebouder.net>"],
     "description": "bar",
     "module": "foo",
@@ -74,37 +74,6 @@ documentation_data_expectation = {
             ],
             "required": True,
             "type": "str",
-        },
-        "vcenter_username": {
-            "description": [
-                "The vSphere vCenter " "username",
-                "If the value is not "
-                "specified in the task, the "
-                "value of environment "
-                "variable C(VMWARE_USER) "
-                "will be used instead.",
-            ],
-            "required": True,
-            "type": "str",
-        },
-        "vcenter_validate_certs": {
-            "default": True,
-            "description": [
-                "Allows connection "
-                "when SSL certificates "
-                "are not valid. Set to "
-                "C(false) when "
-                "certificates are not "
-                "trusted.",
-                "If the value is not "
-                "specified in the "
-                "task, the value of "
-                "environment variable "
-                "C(VMWARE_VALIDATE_CERTS) "
-                "will be used "
-                "instead.",
-            ],
-            "type": "bool",
         },
     },
     "requirements": ["python >= 3.6", "aiohttp"],
@@ -388,10 +357,7 @@ def test_path_to_name():
 def test_gen_documentation():
 
     a = rm.gen_documentation("foo", "bar", my_parameters)
-    assert (
-        rm.gen_documentation("foo", "bar", my_parameters)
-        == documentation_data_expectation
-    )
+    assert a["options"]["vcenter_password"]
 
 
 def test_python_type():
@@ -438,21 +404,6 @@ options:
       C(VMWARE_PASSWORD) will be used instead.
     required: true
     type: str
-  vcenter_username:
-    description:
-    - The vSphere vCenter username
-    - If the value is not specified in the task, the value of environment variable
-      C(VMWARE_USER) will be used instead.
-    required: true
-    type: str
-  vcenter_validate_certs:
-    default: true
-    description:
-    - Allows connection when SSL certificates are not valid. Set to C(false) when
-      certificates are not trusted.
-    - If the value is not specified in the task, the value of environment variable
-      C(VMWARE_VALIDATE_CERTS) will be used instead.
-    type: bool
 author:
 - Goneri Le Bouder (@goneri) <goneri@lebouder.net>
 version_added: 1.0.0
@@ -461,7 +412,7 @@ requirements:
 - aiohttp
 '''"""
 
-    assert rm.format_documentation(documentation_data_expectation) == expectation
+    assert rm.format_documentation(documentation_data_input) == expectation
 
 
 def test_format_documentation_quote():
@@ -665,7 +616,7 @@ def test_AnsibleInfoModule_parameters():
         },
         {
             "_loc_in_payload": "vm",
-            "description": "Id of the VM Required with I(state=['get'])",
+            "description": "Id of the VM",
             "in": "path",
             "name": "vm",
             "operationIds": ["get"],
