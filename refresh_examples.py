@@ -5,6 +5,7 @@ import collections
 import io
 import pathlib
 import ruamel.yaml
+import yaml
 
 
 def _task_to_string(task):
@@ -26,7 +27,7 @@ def get_tasks(target_dir, *scenarios):
     return tasks
 
 
-def extract(tasks):
+def extract(tasks, collection_name):
     by_modules = collections.defaultdict(dict)
     registers = {}
 
@@ -59,7 +60,7 @@ def extract(tasks):
 
         module_name = None
         for key in list(task.keys()):
-            if key.startswith("vcenter_"):
+            if key.startswith(collection_name):
                 module_name = key
                 break
         if not module_name:
@@ -116,13 +117,14 @@ def flatten_module_examples(module_examples):
 
 def inject(target_dir, extracted_examples):
     module_dir = target_dir / "plugins" / "modules"
-    for module_name in extracted_examples:
+    for module_fqcn in extracted_examples:
+        module_name = module_fqcn.split(".")[-1]
         module_path = module_dir / (module_name + ".py")
         if module_path.is_symlink():
             continue
 
         examples_section_to_inject = flatten_module_examples(
-            extracted_examples[module_name]
+            extracted_examples[module_fqcn]
         )
         new_content = ""
         in_examples_block = False
@@ -151,9 +153,13 @@ def main():
         default=pathlib.Path("vmware_rest"),
         help="location of the target repository (default: ./vmware_rest)",
     )
+
     args = parser.parse_args()
+    galaxy_file = args.target_dir / "galaxy.yml"
+    galaxy = yaml.load(galaxy_file.open())
+    collection_name = f"{galaxy['namespace']}.{galaxy['name']}"
     tasks = get_tasks(args.target_dir, "vcenter_vm_scenario1", "prepare_lab")
-    extracted_examples = extract(tasks)
+    extracted_examples = extract(tasks, collection_name)
     inject(args.target_dir, extracted_examples)
 
 
