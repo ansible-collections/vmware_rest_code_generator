@@ -58,16 +58,16 @@ def extract(tasks, collection_name):
             variable_name = task["with_items"].strip(" }{")
             use_registers.append(variable_name.split(".")[0])
 
-        module_name = None
+        module_fqcn = None
         for key in list(task.keys()):
             if key.startswith(collection_name):
-                module_name = key
+                module_fqcn = key
                 break
-        if not module_name:
+        if not module_fqcn:
             continue
 
-        if task[module_name]:
-            for value in task[module_name].values():
+        if task[module_fqcn]:
+            for value in task[module_fqcn].values():
                 if not isinstance(value, str):
                     continue
                 if "{" not in value:
@@ -75,24 +75,21 @@ def extract(tasks, collection_name):
                 variable_name = value.strip(" }{")
                 use_registers.append(variable_name.split(".")[0])
 
-        block = _task_to_string(task)
-        if module_name not in by_modules:
-            by_modules[module_name] = {
+        if module_fqcn not in by_modules:
+            by_modules[module_fqcn] = {
                 "blocks": [],
                 "depends_on": [],
                 "use_registers": [],
             }
-        by_modules[module_name]["blocks"] += [block]
-        by_modules[module_name]["use_registers"] += use_registers
+        by_modules[module_fqcn]["blocks"] += [task]
+        by_modules[module_fqcn]["use_registers"] += use_registers
 
-    for module_name in by_modules:
-        for r in sorted(list(set(by_modules[module_name]["use_registers"]))):
+    for module_fqcn in by_modules:
+        for r in sorted(list(set(by_modules[module_fqcn]["use_registers"]))):
             if r in ["item"]:
                 continue
             try:
-                by_modules[module_name]["depends_on"].append(
-                    _task_to_string(registers[r])
-                )
+                by_modules[module_fqcn]["depends_on"].append(registers[r])
             except KeyError:
                 print(f"Cannot find definition of '{r}', ensure:")
                 print("  - the variable is properly defined")
@@ -105,13 +102,12 @@ def extract(tasks, collection_name):
 def flatten_module_examples(module_examples):
     result = ""
     blocks = module_examples["blocks"]
-    depends_on = module_examples["depends_on"]
-    yaml = ruamel.yaml.YAML()
-    yaml.indent(sequence=4, offset=2)
-    for block in depends_on:
-        result += block + "\n"
-    for block in blocks:
-        result += block + "\n"
+    block_names = [b["name"] for b in blocks]
+    depends_on = [
+        d for d in module_examples["depends_on"] if d["name"] not in block_names
+    ]
+    for block in depends_on + blocks:
+        result += _task_to_string(block) + "\n"
     return result
 
 
