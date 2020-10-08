@@ -7,7 +7,8 @@ cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest
 set -eux
 mkdir -p logs
 (
-    rm docs/source/vmware_rest_scenarios/task_outputs/*
+    rm -rf manual/source/vmware_rest_scenarios/task_outputs
+    mkdir -p manual/source/vmware_rest_scenarios/task_outputs
     cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/vcenter_vm_scenario1
     ./refresh_RETURN_block.sh
 )
