@@ -12,6 +12,10 @@ mkdir -p logs
     cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/vcenter_vm_scenario1
     ./refresh_RETURN_block.sh
 )
+(
+    cd ~/.ansible/collections/ansible_collections/goneri/utils
+    ./scripts/inject_RETURN.py ~/.ansible/collections/ansible_collections/vmware/vmware_rest/manual/source/vmware_rest_scenarios/task_outputs/ ~/git_repos/ansible-collections/vmware_rest/ --config-file config/inject_RETURN.yaml
+)
 tox -e build_manual
 tox -e black
 ansible-test sanity --debug --requirements --local --skip-test future-import-boilerplate --skip-test metaclass-boilerplate --python 3.8 -vvv
