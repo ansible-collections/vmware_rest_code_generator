@@ -788,7 +788,12 @@ async def main( ):
         module.fail_json('vcenter_username cannot be empty')
     if not module.params['vcenter_password']:
         module.fail_json('vcenter_password cannot be empty')
-    session = await open_session(vcenter_hostname=module.params['vcenter_hostname'], vcenter_username=module.params['vcenter_username'], vcenter_password=module.params['vcenter_password'], log_file=module.params['vcenter_rest_log_file'])
+    session = await open_session(
+            vcenter_hostname=module.params['vcenter_hostname'],
+            vcenter_username=module.params['vcenter_username'],
+            vcenter_password=module.params['vcenter_password'],
+            validate_certs=module.params['vcenter_validate_certs'],
+            log_file=module.params['vcenter_rest_log_file'])
     result = await entry_point(module, session)
     module.exit_json(**result)
 
