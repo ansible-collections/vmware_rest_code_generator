@@ -48,7 +48,10 @@ async def open_session(
         trace_configs = []
 
     auth = aiohttp.BasicAuth(vcenter_username, vcenter_password)
-    connector = aiohttp.TCPConnector(limit=20, ssl=validate_certs)
+    if validate_certs:
+        connector = aiohttp.TCPConnector(limit=20)
+    else:
+        connector = aiohttp.TCPConnector(limit=20, ssl=False)
     async with aiohttp.ClientSession(
         connector=connector, connector_owner=False, trace_configs=trace_configs
     ) as session:
