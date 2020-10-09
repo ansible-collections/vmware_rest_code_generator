@@ -440,17 +440,17 @@ class AnsibleModuleBase:
 
     def is_trusted(self):
         trusted_module_allowlist = [
-            "vcenter_cluster_info",
-            "vcenter_datacenter_info",
-            "vcenter_datacenter",
-            "vcenter_datastore_info",
-            "vcenter_folder_info",
-            "vcenter_host_info",
-            "vcenter_host",
-            "vcenter_network_info",
-            "vcenter_vm($|_.+)",
-            "vcenter_storage_policies",
-            "vcenter_resourcepool*",
+            "^vcenter_cluster_info$",
+            "^vcenter_datacenter_info$",
+            "^vcenter_datacenter$",
+            "^vcenter_datastore_info$",
+            "^vcenter_folder_info$",
+            "^vcenter_host_info$",
+            "^vcenter_host$",
+            "^vcenter_network_info$",
+            "^vcenter_vm($|_.+)",
+            "^vcenter_storage_policies_info$",
+            "^vcenter_resourcepool*",
         ]
         if self.name in [
             "vcenter_vm_guest_customization",
