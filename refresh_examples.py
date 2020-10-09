@@ -88,13 +88,15 @@ def extract(tasks, collection_name):
         for r in sorted(list(set(by_modules[module_fqcn]["use_registers"]))):
             if r in ["item"]:
                 continue
+            if r.startswith("lookup("):
+                continue
             try:
                 by_modules[module_fqcn]["depends_on"].append(registers[r])
             except KeyError:
                 print(f"Cannot find definition of '{r}', ensure:")
                 print("  - the variable is properly defined")
                 print("  - the task that define the name has a name")
-                exit(1)
+                raise
 
     return by_modules
 
