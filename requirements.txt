@@ -1,3 +1,2 @@
-astunparse
 ruamel.yaml
 pyyaml
