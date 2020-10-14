@@ -697,6 +697,7 @@ class AnsibleModuleBase:
 # -*- coding: utf-8 -*-
 # Copyright: Ansible Project
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# template: DEFAULT_MODULE
 
 DOCUMENTATION = {documentation}
 
@@ -783,7 +784,7 @@ async def main( ):
     result = await entry_point(module, session)
     module.exit_json(**result)
 
-def build_url(params):
+
 {url_func}
 
 {entry_point_func}
@@ -804,7 +805,7 @@ if __name__ == '__main__':
         module_content = DEFAULT_MODULE.format(
             name=self.name,
             documentation=documentation,
-            url_func=_indent(url_func, 4),
+            url_func=_indent(url_func, 0),
             entry_point_func=_indent(entry_point_func, 0),
             arguments=_indent(arguments, 4),
             payload_format=self.payload(),
@@ -820,9 +821,11 @@ if __name__ == '__main__':
 class AnsibleModule(AnsibleModuleBase):
 
     URL = """
-return (
-    "https://{{vcenter_hostname}}"
-    "{path}").format(**params)
+# template: URL
+def build_url(params):
+    return (
+        "https://{{vcenter_hostname}}"
+        "{path}").format(**params)
 """
 
     def __init__(self, resource, definitions):
@@ -834,6 +837,7 @@ return (
 
     def gen_entry_point_func(self):
         main_content = """
+# template: main_content
 async def entry_point(module, session):
     if module.params['state'] == "present":
         if "_create" in globals():
@@ -863,6 +867,7 @@ async def entry_point(module, session):
                 continue
 
             FUNC_WITH_DATA_TPL = """
+# template: FUNC_WITH_DATA_TPL
 async def _{operation}(params, session):
     _in_query_parameters = PAYLOAD_FORMAT["{operation}"]["query"].keys()
     payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
@@ -884,6 +889,7 @@ async def _{operation}(params, session):
 """
 
             FUNC_WITH_DATA_DELETE_TPL = """
+# template: FUNC_WITH_DATA_DELETE_TPL
 async def _{operation}(params, session):
     _in_query_parameters = PAYLOAD_FORMAT["{operation}"]["query"].keys()
     payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
@@ -905,6 +911,7 @@ async def _{operation}(params, session):
 """
 
             FUNC_WITH_DATA_UPDATE_TPL = """
+# FUNC_WITH_DATA_UPDATE_TPL
 async def _update(params, session):
     payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
     _url = (
@@ -942,6 +949,7 @@ async def _update(params, session):
 """
 
             FUNC_WITH_DATA_CREATE_TPL = """
+# FUNC_WITH_DATA_CREATE_TPL
 async def _create(params, session):
     if params["{list_index}"]:
         _json = await get_device_info(session, build_url(params), params["{list_index}"])
@@ -994,30 +1002,36 @@ async def _create(params, session):
 class AnsibleInfoModule(AnsibleModuleBase):
 
     URL_WITH_LIST = """
-if params['{list_index}']:
-    _in_query_parameters = PAYLOAD_FORMAT["get"]["query"].keys()
-    return (
-        "https://{{vcenter_hostname}}"
-        "{path}").format(**params) + gen_args(params, _in_query_parameters)
-else:
+# template: URL_WITH_LIST
+def build_url(params):
+    if params['{list_index}']:
+        _in_query_parameters = PAYLOAD_FORMAT["get"]["query"].keys()
+        return (
+            "https://{{vcenter_hostname}}"
+            "{path}").format(**params) + gen_args(params, _in_query_parameters)
+    else:
+        _in_query_parameters = PAYLOAD_FORMAT["list"]["query"].keys()
+        return (
+            "https://{{vcenter_hostname}}"
+            "{list_path}").format(**params) + gen_args(params, _in_query_parameters)
+"""
+
+    URL_LIST_ONLY = """
+# template: URL_LIST_ONLY
+def build_url(params):
     _in_query_parameters = PAYLOAD_FORMAT["list"]["query"].keys()
     return (
         "https://{{vcenter_hostname}}"
         "{list_path}").format(**params) + gen_args(params, _in_query_parameters)
 """
 
-    URL_LIST_ONLY = """
-_in_query_parameters = PAYLOAD_FORMAT["list"]["query"].keys()
-return (
-    "https://{{vcenter_hostname}}"
-    "{list_path}").format(**params) + gen_args(params, _in_query_parameters)
-"""
-
-    URL = """
-_in_query_parameters = PAYLOAD_FORMAT["get"]["query"].keys()
-return (
-    "https://{{vcenter_hostname}}"
-    "{path}").format(**params) + gen_args(params, _in_query_parameters)
+    URL_WITH_ARGS = """
+# template: URL_WITH_ARGS
+def build_url(params):
+    _in_query_parameters = PAYLOAD_FORMAT["get"]["query"].keys()
+    return (
+        "https://{{vcenter_hostname}}"
+        "{path}").format(**params) + gen_args(params, _in_query_parameters)
 """
 
     def __init__(self, resource, definitions):
@@ -1048,10 +1062,11 @@ return (
                 path=path, list_path=list_path, list_index=self.list_index(),
             )
         else:
-            return self.URL.format(path=path)
+            return self.URL_WITH_ARGS.format(path=path)
 
     def gen_entry_point_func(self):
         FUNC = """
+# template: FUNC
 async def entry_point(module, session):
     url = build_url(module.params)
     async with session.get(url) as resp:
