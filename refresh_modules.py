@@ -9,7 +9,6 @@ import re
 import pathlib
 import shutil
 import subprocess
-import astunparse
 from ruamel.yaml import YAML
 
 
@@ -286,49 +285,36 @@ def path_to_name(path):
 
 
 def gen_arguments_py(parameters, list_index=None):
-    def _add_key(assign, key, value):
-        k = [ast.Constant(value=key, kind=None)]
-        v = [ast.Constant(value=value, kind=None)]
-        assign.value.keys.append(k)
-        assign.value.values.append(v)
-
-    ARGUMENT_TPL = """argument_spec['{name}'] = {{}}"""
-
     result = ""
     for parameter in parameters:
         name = normalize_parameter_name(parameter["name"])
-        assign = ast.parse(ARGUMENT_TPL.format(name=name)).body[0]
-
-        # if None and list_index:
-        #     assign = ast.parse(ARGUMENT_TPL.format(name=list_index)).body[0]
-        #     _add_key(assign, "aliases", [parameter["name"]])
-        #     parameter["name"] = list_index
+        values = []
 
         if name in ["user_name", "username", "password"]:
-            _add_key(assign, "no_log", True)
+            values.append("'no_log': True")
 
         if parameter.get("required"):
-            if list_index == parameter["name"]:
-                pass
-            else:
-                _add_key(assign, "required", True)
+            if list_index != parameter["name"]:
+                values.append("'required': True")
+
+        _type = python_type(parameter["type"])
+        values.append(f"'type': '{_type}'")
+        if "enum" in parameter:
+            choices = ", ".join([f"'{i}'" for i in sorted(parameter["enum"])])
+            values.append(f"'choices': [{choices}]")
+        if python_type(parameter["type"]) == "list":
+            _elements = python_type(parameter["elements"])
+            values.append(f"'elements': '{_elements}'")
 
         # "bus" option defaulting on 0
         if name == "bus":
-            _add_key(assign, "default", 0)
+            values.append("'default': 0")
+        elif "default" in parameter:
+            default = parameter["default"]
+            values.append(f"'default': '{default}'")
 
-        _add_key(assign, "type", python_type(parameter["type"]))
-        if "enum" in parameter:
-            _add_key(assign, "choices", sorted(parameter["enum"]))
-        if python_type(parameter["type"]) == "list":
-            _add_key(assign, "elements", python_type(parameter["elements"]))
-
-        if "default" in parameter:
-            _add_key(assign, "default", parameter["default"])
-
-        #        if "operationIds" in parameter:
-        #            _add_key(assign, "operationIds", sorted(parameter["operationIds"]))
-        result += astunparse.unparse(assign).rstrip("\n")
+        result += f"\nargument_spec['{name}'] = "
+        result += "{" + ", ".join(values) + "}"
     return result
 
 
@@ -847,7 +833,7 @@ return (
         )
 
     def gen_entry_point_func(self):
-        MAIN_FUNC = """
+        main_content = """
 async def entry_point(module, session):
     if module.params['state'] == "present":
         if "_create" in globals():
@@ -861,8 +847,8 @@ async def entry_point(module, session):
 
     func = globals()["_" + operation]
     return await func(module.params, session)
+
 """
-        main_func = ast.parse(MAIN_FUNC.format(name=self.name))
 
         for operation in sorted(self.default_operationIds):
             (verb, path, _, _) = self.resource.operations[operation]
@@ -997,18 +983,12 @@ async def _create(params, session):
                 template = FUNC_WITH_DATA_UPDATE_TPL
             else:
                 template = FUNC_WITH_DATA_TPL
-            func = ast.parse(
-                template.format(
-                    operation=operation,
-                    verb=verb,
-                    path=path,
-                    list_index=self.list_index(),
-                )
-            ).body[0]
-            # TODO, we can probably skip the transformation
-            main_func.body.append(func)
 
-        return astunparse.unparse(main_func.body)
+            main_content += template.format(
+                operation=operation, verb=verb, path=path, list_index=self.list_index(),
+            )
+
+        return main_content
 
 
 class AnsibleInfoModule(AnsibleModuleBase):
