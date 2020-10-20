@@ -714,6 +714,7 @@ import socket
 import json
 from ansible.module_utils.basic import env_fallback
 try:
+    from ansible_collections.cloud.common.plugins.module_utils.turbo.exceptions import EmbeddedModuleFailure
     from ansible_collections.cloud.common.plugins.module_utils.turbo.module import AnsibleTurboModule as AnsibleModule
 except ImportError:
     from ansible.module_utils.basic import AnsibleModule
@@ -967,6 +968,8 @@ async def _create(params, session):
         "https://{{vcenter_hostname}}"
         "{path}").format(**params)
     async with session.{verb}(_url, json=payload) as resp:
+        if resp.status == 500:
+            raise EmbeddedModuleFailure(f"Request has failed: status={{resp.status}}, {{await resp.text()}}")
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()
