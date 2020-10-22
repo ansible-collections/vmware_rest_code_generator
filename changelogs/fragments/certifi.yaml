@@ -1,0 +1,3 @@
+---
+minor_changes:
+- ssl can now use the ``certifi`` Root Certificates. This is useful on MacOS. On Linux, ``certifi`` should redirect to the system Certificates.

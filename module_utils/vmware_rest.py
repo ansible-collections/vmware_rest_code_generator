@@ -48,10 +48,16 @@ async def open_session(
         trace_configs = []
 
     auth = aiohttp.BasicAuth(vcenter_username, vcenter_password)
-    if validate_certs:
-        connector = aiohttp.TCPConnector(limit=20)
-    else:
-        connector = aiohttp.TCPConnector(limit=20, ssl=False)
+    ssl = importlib.import_module("ssl")
+    try:
+        certifi = importlib.import_module("certifi")
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+    except ModuleNotFoundError:
+        ssl_context = ssl.create_default_context()
+    if validate_certs is False:
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+    connector = aiohttp.TCPConnector(limit=20, ssl=ssl_context)
     async with aiohttp.ClientSession(
         connector=connector, connector_owner=False, trace_configs=trace_configs
     ) as session:
@@ -69,6 +75,8 @@ async def open_session(
                         )
                     )
                 json = await resp.json()
+        except aiohttp.client_exceptions.ClientConnectorCertificateError as e:
+            raise exceptions.EmbeddedModuleFailure(f"SSL connection failed: {e}")
         except aiohttp.client_exceptions.ClientConnectorError as e:
             raise exceptions.EmbeddedModuleFailure(f"Authentication failure: {e}")
 
