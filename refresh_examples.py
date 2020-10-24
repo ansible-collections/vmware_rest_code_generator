@@ -127,7 +127,7 @@ def inject(target_dir, extracted_examples):
         new_content = ""
         in_examples_block = False
         for l in module_path.read_text().split("\n"):
-            if l == 'EXAMPLES = """':
+            if l == 'EXAMPLES = r"""':
                 in_examples_block = True
                 new_content += l + "\n" + examples_section_to_inject
             elif in_examples_block and l == '"""':
