@@ -2,7 +2,7 @@ import ast
 import pytest
 import types
 
-import refresh_modules as rm
+import vmware_rest_code_generator.cmd.refresh_modules as rm
 
 my_parameters = [
     {"name": "aaa", "type": "boolean", "description": "a second parameter"},

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import pathlib
 import re
 import shutil
@@ -1209,11 +1210,14 @@ def main():
     args = parser.parse_args()
 
     module_list = []
-    p = pathlib.Path("7.0.0")
-    # for json_file in p.glob("*.json"):
-    #     if str(json_file) == "7.0.0/api.json":
-    #         continue
-    for json_file in p.glob("*.json"):
+    if os.environ.get("VIRTUAL_ENV"):
+        data_dir = pathlib.Path(
+            f"{os.environ['VIRTUAL_ENV']}/vmware_rest_code_generator"
+        )
+    else:
+        data_dir = pathlib.Path(".")
+    api_specification_dir = data_dir / "api_specifications" / "7.0.0"
+    for json_file in api_specification_dir.glob("vcenter.json"):
         print("Generating modules from {}".format(json_file))
         swagger_file = SwaggerFile(json_file)
         resources = swagger_file.init_resources(swagger_file.paths.values())
@@ -1286,9 +1290,9 @@ def main():
         ).format(git_revision=git_revision())
     )
 
-    shutil.copy(
-        "module_utils/vmware_rest.py", str(args.target_dir / "plugins" / "module_utils")
-    )
+    vmware_rest_src = data_dir / "module_utils" / "vmware_rest.py"
+    vmware_rest_dest = args.target_dir / "plugins" / "module_utils" / "vmware_rest.py"
+    vmware_rest_dest.write_text(vmware_rest_src.read_text())
 
 
 if __name__ == "__main__":
