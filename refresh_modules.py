@@ -701,10 +701,10 @@ class AnsibleModuleBase:
 
 DOCUMENTATION = {documentation}
 
-EXAMPLES = r\"\"\"
+EXAMPLES = \"\"\"
 \"\"\"
 
-RETURN = r\"\"\"
+RETURN = \"\"\"
 \"\"\"
 
 # This structure describes the format of the data expected by the end-points
