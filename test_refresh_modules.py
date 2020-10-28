@@ -33,7 +33,7 @@ documentation_data_input = {
                 "a second parameter. the field must "
                 "contain the id of resources returned by "
                 "M(vcenter_vm_hardware_disk).",
-                "Valide attributes are:",
+                "Valid attributes are:",
                 " - C(a_subkey) (ccc): more blabla",
             ],
             "required": True,
@@ -375,7 +375,7 @@ options:
   aaa:
     description:
     - a second parameter. the field must contain the id of resources returned by M(vcenter_vm_hardware_disk).
-    - 'Valide attributes are:'
+    - 'Valid attributes are:'
     - ' - C(a_subkey) (ccc): more blabla'
     required: true
     type: int

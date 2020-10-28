@@ -7,8 +7,6 @@ import re
 import shutil
 import subprocess
 
-from ruamel.yaml import YAML
-
 
 def normalize_parameter_name(name):
     # the in-query filter.* parameters are not valid Python variable names.
@@ -83,29 +81,26 @@ class Description:
             "VirtualMachine": "vcenter_vm_info",
         }
 
-        if m:
-            resource_name = m.group(1)
-            try:
-                module_name = mapping[resource_name]
-            except KeyError:
-                print(f"No mapping for {resource_name}")
-                raise
-
-            if (
-                f"must be an identifier for the resource type: {resource_name}"
-                in my_string
-            ):
-                return my_string.replace(
-                    f"must be an identifier for the resource type: {resource_name}",
-                    f"must be the id of a resource returned by M({module_name})",
-                )
-            elif f"identifiers for the resource type: {resource_name}" in my_string:
-                return my_string.replace(
-                    f"identifiers for the resource type: {resource_name}",
-                    f"the id of resources returned by M({module_name})",
-                )
-        else:
+        if not m:
             return my_string
+
+        resource_name = m.group(1)
+        try:
+            module_name = mapping[resource_name]
+        except KeyError:
+            print(f"No mapping for {resource_name}")
+            raise
+
+        if f"must be an identifier for the resource type: {resource_name}" in my_string:
+            return my_string.replace(
+                f"must be an identifier for the resource type: {resource_name}",
+                f"must be the id of a resource returned by M({module_name})",
+            )
+        if f"identifiers for the resource type: {resource_name}" in my_string:
+            return my_string.replace(
+                f"identifiers for the resource type: {resource_name}",
+                f"the id of resources returned by M({module_name})",
+            ).rstrip()
 
 
 def python_type(value):
@@ -186,7 +181,7 @@ def gen_documentation(name, description, parameters):
         if parameter.get("description"):
             description.append(parameter["description"])
         if parameter.get("subkeys"):
-            description.append("Valide attributes are:")
+            description.append("Valid attributes are:")
             for subkey in parameter.get("subkeys"):
                 subkey["type"] = python_type(subkey["type"])
                 description.append(
@@ -226,14 +221,13 @@ def format_documentation(documentation):
     def _sanitize(input):
         if isinstance(input, str):
             return input.replace("':'", ":")
-        elif isinstance(input, list):
+        if isinstance(input, list):
             return [l.replace("':'", ":") for l in input]
-        elif isinstance(input, dict):
+        if isinstance(input, dict):
             return {k: _sanitize(v) for k, v in input.items()}
-        elif isinstance(input, bool):
+        if isinstance(input, bool):
             return input
-        else:
-            raise TypeError
+        raise TypeError
 
     keys = [
         "module",
@@ -330,9 +324,9 @@ def flatten_ref(tree, definitions):
         if tree.startswith("#/definitions/"):
             raise Exception("TODO")
         return definitions.get(tree)
-    elif isinstance(tree, list):
+    if isinstance(tree, list):
         return [flatten_ref(i, definitions) for i in tree]
-    elif tree is None:
+    if tree is None:
         return {}
     for k in tree:
         v = tree[k]
@@ -691,7 +685,7 @@ class AnsibleModuleBase:
 
     def renderer(self, target_dir):
         DEFAULT_MODULE = """
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Copyright: Ansible Project
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
@@ -706,10 +700,10 @@ RETURN = \"\"\"
 \"\"\"
 
 # This structure describes the format of the data expected by the end-points
-PAYLOAD_FORMAT = {payload_format}
+PAYLOAD_FORMAT = {payload_format}  # pylint: disable=line-too-long
 
-import socket
 import json
+import socket
 from ansible.module_utils.basic import env_fallback
 try:
     from ansible_collections.cloud.common.plugins.module_utils.turbo.exceptions import EmbeddedModuleFailure
@@ -873,7 +867,7 @@ async def entry_point(module, session):
 # template: FUNC_WITH_DATA_TPL
 async def _{operation}(params, session):
     _in_query_parameters = PAYLOAD_FORMAT["{operation}"]["query"].keys()
-    payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
+    payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
     subdevice_type = get_subdevice_type("{path}")
     if subdevice_type and not params[subdevice_type]:
         _json = (await exists(params, session, build_url(params)))
@@ -895,7 +889,7 @@ async def _{operation}(params, session):
 # template: FUNC_WITH_DATA_DELETE_TPL
 async def _{operation}(params, session):
     _in_query_parameters = PAYLOAD_FORMAT["{operation}"]["query"].keys()
-    payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
+    payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
     subdevice_type = get_subdevice_type("{path}")
     if subdevice_type and not params[subdevice_type]:
         _json = (await exists(params, session, build_url(params)))
@@ -916,7 +910,7 @@ async def _{operation}(params, session):
             FUNC_WITH_DATA_UPDATE_TPL = """
 # FUNC_WITH_DATA_UPDATE_TPL
 async def _update(params, session):
-    payload = payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
+    payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
     _url = (
         "https://{{vcenter_hostname}}"
         "{path}").format(**params)
@@ -962,8 +956,7 @@ async def _create(params, session):
         if "_update" in globals():
             params["{list_index}"] = _json["id"]
             return (await globals()["_update"](params, session))
-        else:
-            return (await update_changed_flag(_json, 200, 'get'))
+        return (await update_changed_flag(_json, 200, 'get'))
 
     payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
     _url = (
@@ -1015,11 +1008,10 @@ def build_url(params):
         return (
             "https://{{vcenter_hostname}}"
             "{path}").format(**params) + gen_args(params, _in_query_parameters)
-    else:
-        _in_query_parameters = PAYLOAD_FORMAT["list"]["query"].keys()
-        return (
-            "https://{{vcenter_hostname}}"
-            "{list_path}").format(**params) + gen_args(params, _in_query_parameters)
+    _in_query_parameters = PAYLOAD_FORMAT["list"]["query"].keys()
+    return (
+        "https://{{vcenter_hostname}}"
+        "{list_path}").format(**params) + gen_args(params, _in_query_parameters)
 """
 
     URL_LIST_ONLY = """
@@ -1063,12 +1055,11 @@ def build_url(params):
 
         if not path:
             return self.URL_LIST_ONLY.format(list_path=list_path)
-        elif list_path and path.endswith("}"):
+        if list_path and path.endswith("}"):
             return self.URL_WITH_LIST.format(
                 path=path, list_path=list_path, list_index=self.list_index(),
             )
-        else:
-            return self.URL_WITH_ARGS.format(path=path)
+        return self.URL_WITH_ARGS.format(path=path)
 
     def gen_entry_point_func(self):
         FUNC = """
@@ -1222,7 +1213,7 @@ def main():
     # for json_file in p.glob("*.json"):
     #     if str(json_file) == "7.0.0/api.json":
     #         continue
-    for json_file in p.glob("vcenter.json"):
+    for json_file in p.glob("*.json"):
         print("Generating modules from {}".format(json_file))
         swagger_file = SwaggerFile(json_file)
         resources = swagger_file.init_resources(swagger_file.paths.values())
