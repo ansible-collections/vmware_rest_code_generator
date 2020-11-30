@@ -1,5 +1,6 @@
 import hashlib
 import importlib
+from ansible.module_utils.basic import missing_required_lib
 
 
 async def open_session(
@@ -21,13 +22,16 @@ async def open_session(
     if digest in open_session._pool:
         return open_session._pool[digest]
 
-    aiohttp = importlib.import_module("aiohttp")
     exceptions = importlib.import_module(
         "ansible_collections.cloud.common.plugins.module_utils.turbo.exceptions"
     )
+    try:
+        aiohttp = importlib.import_module("aiohttp")
+    except ImportError:
+        raise exceptions.EmbeddedModuleFailure(msg=missing_required_lib('aiohttp'))
 
     if not aiohttp:
-        raise exceptions.EmbeddedModuleFailure()
+        raise exceptions.EmbeddedModuleFailure(msg='Failed to import aiohttp')
 
     if log_file:
         trace_config = aiohttp.TraceConfig()

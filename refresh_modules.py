@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
-import ast
-import collections
-import io
 import json
-import re
 import pathlib
+import re
 import shutil
 import subprocess
+
 from ruamel.yaml import YAML
 
 
 def normalize_parameter_name(name):
     # the in-query filter.* parameters are not valid Python variable names.
-    # We replace the . with a _ to avoid proble,
+    # We replace the . with a _ to avoid problem,
     return name.replace("filter.", "filter_")
 
 
@@ -767,7 +765,7 @@ def prepare_argument_spec():
     return argument_spec
 
 
-async def main( ):
+async def main():
     module_args = prepare_argument_spec()
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
     if not module.params['vcenter_hostname']:
@@ -776,12 +774,15 @@ async def main( ):
         module.fail_json('vcenter_username cannot be empty')
     if not module.params['vcenter_password']:
         module.fail_json('vcenter_password cannot be empty')
-    session = await open_session(
+    try:
+        session = await open_session(
             vcenter_hostname=module.params['vcenter_hostname'],
             vcenter_username=module.params['vcenter_username'],
             vcenter_password=module.params['vcenter_password'],
             validate_certs=module.params['vcenter_validate_certs'],
             log_file=module.params['vcenter_rest_log_file'])
+    except EmbeddedModuleFailure as err:
+        module.fail_json(err.get_message())
     result = await entry_point(module, session)
     module.exit_json(**result)
 
