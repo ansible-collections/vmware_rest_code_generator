@@ -970,7 +970,8 @@ async def _create(params, session):
         "{path}").format(**params)
     async with session.{verb}(_url, json=payload) as resp:
         if resp.status == 500:
-            raise EmbeddedModuleFailure(f"Request has failed: status={{resp.status}}, {{await resp.text()}}")
+            text = await resp.text()
+            raise EmbeddedModuleFailure(f"Request has failed: status={{resp.status}}, {{text}}")
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()
