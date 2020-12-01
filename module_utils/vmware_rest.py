@@ -1,6 +1,7 @@
 import hashlib
 import importlib
 from ansible.module_utils.basic import missing_required_lib
+from ansible.module_utils.parsing.convert_bool import boolean
 
 
 async def open_session(
@@ -10,6 +11,7 @@ async def open_session(
     validate_certs=True,
     log_file=None,
 ):
+    validate_certs = boolean(validate_certs)
     m = hashlib.sha256()
     m.update(vcenter_hostname.encode())
     m.update(vcenter_username.encode())
