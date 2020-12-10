@@ -30,10 +30,10 @@ async def open_session(
     try:
         aiohttp = importlib.import_module("aiohttp")
     except ImportError:
-        raise exceptions.EmbeddedModuleFailure(msg=missing_required_lib('aiohttp'))
+        raise exceptions.EmbeddedModuleFailure(msg=missing_required_lib("aiohttp"))
 
     if not aiohttp:
-        raise exceptions.EmbeddedModuleFailure(msg='Failed to import aiohttp')
+        raise exceptions.EmbeddedModuleFailure(msg="Failed to import aiohttp")
 
     if log_file:
         trace_config = aiohttp.TraceConfig()
