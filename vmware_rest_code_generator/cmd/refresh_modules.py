@@ -445,6 +445,9 @@ class AnsibleModuleBase:
             "^vcenter_vm($|_.+)",
             "^vcenter_storage_policies_info$",
             "^vcenter_resourcepool*",
+            "^content_library_info$",
+            "^content_locallibrary_info$",
+            "^content_subscribedlibrary_info$",
         ]
         if self.name in [
             "vcenter_vm_guest_customization",
