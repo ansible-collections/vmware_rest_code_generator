@@ -34,7 +34,10 @@ Install the original `vmware.vmware_rest` collection from git:
 
 Refresh the content of the modules using this repository:
 
-    tox -e refresh_modules,refresh_examples -- --target-dir ~/.ansible/collections/ansible_collections/vmware/vmware_rest
+    pip install git+https://github.com/ansible-collection/vmware_rest_code_generator
+    vmware_rest_code_generator_refresh_modules --target-dir .
+    vmware_rest_code_generator_refresh_examples --target-dir .
+    black plugins tests
 
 Refresh the `RETURN` of the modules using the test-suite:
 
