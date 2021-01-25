@@ -709,9 +709,11 @@ from ansible.module_utils.basic import env_fallback
 try:
     from ansible_collections.cloud.common.plugins.module_utils.turbo.exceptions import EmbeddedModuleFailure
     from ansible_collections.cloud.common.plugins.module_utils.turbo.module import AnsibleTurboModule as AnsibleModule
-    AnsibleModule.collection_name = "vmware.vmware_rest"
 except ImportError:
     from ansible.module_utils.basic import AnsibleModule
+
+AnsibleModule.collection_name = "vmware.vmware_rest"
+
 from ansible_collections.vmware.vmware_rest.plugins.module_utils.vmware_rest import (
     build_full_device_list,
     exists,
