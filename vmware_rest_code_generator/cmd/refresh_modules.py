@@ -1113,7 +1113,7 @@ class Definitions:
         if definition is None:
             raise Exception("Cannot find ref for {ref}")
 
-        return flatten_ref(definition, self.definitions)
+        return definition
 
 
 class Path:
