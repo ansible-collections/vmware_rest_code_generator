@@ -11,7 +11,14 @@ my_parameters = [
         "type": "integer",
         "required": True,
         "description": "a second parameter. the field must contain identifiers for the resource type: vcenter.vm.hardware.Disk.",
-        "subkeys": [{"type": "ccc", "name": "a_subkey", "description": "more blabla"}],
+        "subkeys": [
+            {
+                "type": "ccc",
+                "name": "a_subkey",
+                "description": "more blabla",
+                "required": True,
+            }
+        ],
     },
     {
         "name": "ccc",
@@ -694,12 +701,14 @@ def test_AnsibleModule_parameters_complex():
                     "specified, {@name #host} must be a member of "
                     "{@name #cluster}.",
                     "name": "cluster",
+                    "required": False,
                     "type": "string",
                 },
                 {
                     "description": "Virtual machine folder into which the virtual "
                     "machine should be placed.",
                     "name": "folder",
+                    "required": False,
                     "type": "string",
                 },
                 {
@@ -711,12 +720,14 @@ def test_AnsibleModule_parameters_complex():
                     "specified, {@name #host} must be a member of "
                     "{@name #cluster}.",
                     "name": "host",
+                    "required": False,
                     "type": "string",
                 },
                 {
                     "description": "Resource pool into which the virtual machine "
                     "should be placed.",
                     "name": "resource_pool",
+                    "required": False,
                     "type": "string",
                 },
             ],

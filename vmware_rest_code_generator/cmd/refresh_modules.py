@@ -197,6 +197,8 @@ def gen_documentation(name, description, parameters):
                 description.append(
                     " - C({name}) ({type}): {description}".format(**subkey)
                 )
+                if subkey["required"]:
+                    description.append("   This key is required.")
                 if "enum" in subkey:
                     description.append("   - Accepted values:")
                     for i in subkey["enum"]:
@@ -346,7 +348,8 @@ def flatten_ref(tree, definitions):
                 # to avoid an endless loop with
                 # vapi.std.nested_localizable_message
                 return {"go_to": "vapi.std.localization_param"}
-            data = flatten_ref(definitions.get(dotted), definitions)
+            definition = definitions.get(dotted)
+            data = flatten_ref(definition, definitions)
             if "description" not in data and "description" in tree:
                 data["description"] = tree["description"]
             return data
@@ -679,6 +682,7 @@ class AnsibleModuleBase:
                         "name": sub_k,
                         "type": sub_v["type"],
                         "description": sub_v.get("description", ""),
+                        "required": True if sub_k in v.get("required", []) else False,
                     }
                     if "enum" in sub_v:
                         subkey["enum"] = sub_v["enum"]
