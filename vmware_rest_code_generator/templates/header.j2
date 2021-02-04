@@ -79,9 +79,7 @@ def prepare_argument_spec():
 
 async def main():
     required_if = list([
-        {% for i in required_if %}
-        {{ i}},
-        {% endfor %}
+        {{ required_if|join(",") }}
     ])
 
     module_args = prepare_argument_spec()

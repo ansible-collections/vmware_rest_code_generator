@@ -23,7 +23,7 @@ def jinja2_renderer(template_file, **kwargs):
 def normalize_parameter_name(name):
     # the in-query filter.* parameters are not valid Python variable names.
     # We replace the . with a _ to avoid problem,
-    return name.replace("filter.", "filter_").replace("~action", "action")
+    return name.replace("filter.", "filter_")  # < 7.0.2
 
 
 class Description:
@@ -78,7 +78,6 @@ class Description:
     @classmethod
     def write_M(cls, my_string):
         my_string = re.sub(r"When operations return.*\.($|\s)", "", my_string)
-
         m = re.search(r"resource type:\s([a-zA-Z][\w\.]+[a-z])", my_string)
         mapping = {
             "ClusterComputeResource": "vcenter_cluster_info",
@@ -194,11 +193,15 @@ def gen_documentation(name, description, parameters):
     # Note: this series of if block is overcomplicated and should
     # be refactorized.
     for parameter in parameters:
+        if parameter["name"] == "action":
+            continue
         normalized_name = normalize_parameter_name(parameter["name"])
         description = []
         option = {}
         if parameter.get("required"):
             option["required"] = True
+        if parameter.get("aliases"):
+            option["aliases"] = parameter.get("aliases")
         if parameter.get("description"):
             description.append(parameter["description"])
         if parameter.get("subkeys"):
@@ -281,8 +284,18 @@ def path_to_name(path):
         else:
             elements.append(i)
 
-    # workaround for vcenter_vm_power
-    if elements[-1] in ("stop", "start", "suspend", "reset"):
+    # workaround for vcenter_vm_power and appliance_services, appliance_shutdown, appliance_system_storage
+    if elements[-1] in (
+        "stop",
+        "start",
+        "restart",
+        "suspend",
+        "reset",
+        "cancel",
+        "poweroff",
+        "reboot",
+        "resize",
+    ):
         elements = elements[:-1]
     if elements[0:3] == ["rest", "com", "vmware"]:
         elements = elements[3:]
@@ -307,12 +320,17 @@ def gen_arguments_py(parameters, list_index=None):
         name = normalize_parameter_name(parameter["name"])
         values = []
 
-        if name in ["user_name", "username", "password"]:
+        if name in ["user_name", "username", "encryption_key", "client_token"]:
+            values.append("'no_log': True")
+        elif "password" in name:
             values.append("'no_log': True")
 
         if parameter.get("required"):
-            if list_index != parameter["name"]:
-                values.append("'required': True")
+            values.append("'required': True")
+
+        aliases = parameter.get("aliases")
+        if aliases:
+            values.append(f"'aliases': {aliases}")
 
         _type = python_type(parameter["type"])
         values.append(f"'type': '{_type}'")
@@ -357,7 +375,7 @@ def flatten_ref(tree, definitions):
         v = tree[k]
         if k == "$ref":
             dotted = v.split("/")[2]
-            if dotted == "vapi.std.localization_param":
+            if dotted in ["vapi.std.localization_param", "VapiStdLocalizationParam"]:
                 # to avoid an endless loop with
                 # vapi.std.nested_localizable_message
                 return {"go_to": "vapi.std.localization_param"}
@@ -369,8 +387,6 @@ def flatten_ref(tree, definitions):
         elif isinstance(v, dict):
             tree[k] = flatten_ref(v, definitions)
         else:
-            # Note: should never happen,
-            # corner case for appliance_infraprofile_configs_info
             pass
     return tree
 
@@ -379,6 +395,7 @@ class Resource:
     def __init__(self, name):
         self.name = name
         self.operations = {}
+        self.summary = {}
 
 
 class AnsibleModuleBase:
@@ -389,55 +406,9 @@ class AnsibleModuleBase:
         self.default_operationIds = None
 
     def description(self):
-        m = re.match("vcenter_vm_hardware_adapter_(.*)_info", self.name)
-        if m:
-            vm_resource = m.group(1).upper()
-            return f"Collect the {vm_resource} adapter information from a VM"
-
-        m = re.match("vcenter_vm_hardware_adapter_(.*)", self.name)
-        if m:
-            vm_resource = m.group(1).upper()
-            return f"Manage the {vm_resource} adapter of a VM"
-
-        m = re.match("vcenter_vm_hardware_(.*)_info", self.name)
-        if m:
-            vm_resource = m.group(1).replace("_", " ")
-            return f"Collect the {vm_resource} information from a VM"
-
-        m = re.match("vcenter_vm_hardware_(.*)", self.name)
-        if m:
-            vm_resource = m.group(1).replace("_", " ")
-            return f"Manage the {vm_resource} of a VM"
-
-        m = re.match("vcenter_vm_(guest_.*)_info", self.name)
-        if m:
-            vm_resource = m.group(1).replace("_", " ")
-            return f"Collect the {vm_resource} information"
-
-        m = re.match("vcenter_vm_(guest_.*)", self.name)
-        if m:
-            vm_resource = m.group(1).replace("_", " ")
-            return f"Manage the {vm_resource}"
-
-        m = re.match("vcenter_vm_(.*)info", self.name)
-        if m:
-            vm_resource = m.group(1).replace("_", " ")
-            return f"Collect the {vm_resource} information from a VM"
-
-        m = re.match("vcenter_vm_(.*)", self.name)
-        if m:
-            vm_resource = m.group(1).replace("_", " ")
-            return f"Manage the {vm_resource} of a VM"
-
-        m = re.match("vcenter_(.*)_info", self.name)
-        if m:
-            vm_resource = m.group(1).replace("_", " ")
-            return f"Collect the information associated with the vCenter {vm_resource}s"
-
-        m = re.match("vcenter_(.*)", self.name)
-        if m:
-            vm_resource = m.group(1).replace("_", " ")
-            return f"Manage the {vm_resource} of a vCenter"
+        for operationId in self.default_operationIds:
+            if operationId in self.resource.summary:
+                return self.resource.summary[operationId]
 
         print(f"generic description: {self.name}")
         return f"Handle resource of type {self.name}"
@@ -464,22 +435,26 @@ class AnsibleModuleBase:
             "^content_subscribedlibrary$",
             "^content_subscribedlibrary_info$",
             "^appliance.*$",
+            "^vcenter_vm_storage_policy_compliance_info$",
         ]
-        if self.name in [
+        regexes = [re.compile(i) for i in trusted_module_allowlist]
+        if any([r.match(self.name) for r in regexes]):
+            return True
+
+        for prefix in [
             "vcenter_vm_guest_customization",
             "vcenter_vm_guest_power",
             "vcenter_vm_guest_power_info",
             "vcenter_vm_hardware_action_upgrade",  # vm_hardware already allow the version upgrade
             "vcenter_vm_tools_installer",  # does not work
-            "vcenter_vm_tools_installer_info",
             "vcenter_vm_storage_policy_compliance",  # does not work, returns 404
             "appliance_networking_dns_hostname",  # Fails with: Host name is used as a network identity, the set operation is not allowed.
+            "appliance_monitoring",
+            "appliance_update",
         ]:
-            return False
+            if self.name.startswith(prefix):
+                return False
 
-        regexes = [re.compile(i) for i in trusted_module_allowlist]
-        if any([r.match(self.name) for r in regexes]):
-            return True
         return False
 
     def list_index(self):
@@ -511,15 +486,34 @@ class AnsibleModuleBase:
         return payload
 
     def answer(self):
-        try:
-            raw_answer = flatten_ref(
-                self.resource.operations["get"][3]["200"], self.definitions
-            )
-            fields = raw_answer["schema"]["properties"]["value"]["properties"]
-        except KeyError:
+        # This is arguably not super elegant. The list outputs just include a summary of the resources,
+        # with this little transformation, we get access to the full item
+        output_format = None
+        for i in ["list", "get"]:
+            if i in self.resource.operations:
+                output_format = self.resource.operations[i][3]["200"]
+        if not output_format:
             return
 
-        return fields
+        if "items" in output_format["schema"]:
+            ref = (
+                output_format["schema"]["items"]
+                .get("$ref", "")
+                .replace("Summary", "Info")
+            )
+        elif "schema" in output_format:
+            ref = output_format["schema"].get("$ref")
+        else:
+            ref = output_format.get("$ref")
+
+        if not ref:
+            return
+        try:
+            raw_answer = flatten_ref({"$ref": ref}, self.definitions)
+        except KeyError:
+            return
+        if "properties" in raw_answer:
+            return raw_answer["properties"].keys()
 
     def ansible_state(self, operationId):
         mapping = {
@@ -584,7 +578,11 @@ class AnsibleModuleBase:
         # Note: If the final result comes with a "label" field, we expose a "label"
         # parameter. We will use the field to identify an existing resource.
         if answer_fields and "label" in answer_fields:
-            results["label"] = {"type": "str", "name": "label"}
+            results["label"] = {
+                "type": "str",
+                "name": "label",
+                "description": "The name of the item",
+            }
 
         for name, result in results.items():
             if result.get("enum"):
@@ -632,6 +630,16 @@ class AnsibleModuleBase:
         if len(self.resource.operations) == 1:
             del results["state"]
 
+        # Suppport pre 7.0.2 filters
+        if "list" in self.default_operationIds or "get" in self.default_operationIds:
+            for i in ["datacenters", "folders", "names"]:
+                if i in results and results[i]["type"] == "array":
+                    results[i]["aliases"] = [f"filter_{i}"]
+            if "type" in results and results["type"]["type"] == "string":
+                results["type"]["aliases"] = ["filter_type"]
+            if "types" in results and results["types"]["type"] == "array":
+                results["types"]["aliases"] = ["filter_types"]
+
         return sorted(results.values(), key=lambda item: item["name"])
 
     def gen_required_if(self, parameters):
@@ -642,7 +650,8 @@ class AnsibleModuleBase:
         entries = []
         for operation, fields in by_states.items():
             state = self.ansible_state(operation)
-            entries.append(["state", state, sorted(set(fields)), True])
+            if "state" in entries:
+                entries.append(["state", state, sorted(set(fields)), True])
         return entries
 
     @staticmethod
@@ -675,18 +684,26 @@ class AnsibleModuleBase:
                     for name, property in v["spec"]["properties"].items():
                         yield name, property, ["spec"], name in required_keys
 
-                # appliance_networking_dns_hostname_info
-                elif "name" in v and isinstance(v["name"], dict):
-                    yield "name", v["name"], [], []
-                elif "name" in v:
-                    yield v["name"], v, [], v.get("required")
                 elif isinstance(v, dict):
-                    for k, data in v.items():
-                        yield k, data, [], k in required_keys or data.get("required")
+                    if not isinstance(v, dict):
+                        continue
+                    # {'type': 'string', 'required': True, 'in': 'path', 'name': 'datacenter', 'description': 'Identifier of the datacenter.'}
+                    if "name" in v and "in" in v and v.get("in") in ["path", "query"]:
+                        yield v["name"], v, [], v.get("required")
+                    # elif "name" in v and isinstance(v["name", dict]):
+                    #    yield v["name"], v, [], v.get("required")
+                    else:
+                        for k, data in v.items():
+                            if isinstance(data, dict):
+                                yield k, data, [], k in required_keys or data.get(
+                                    "required"
+                                )
 
         parameters = []
 
         for name, v, parent, required in get_next(properties):
+            if name == "request_body":
+                raise ValueError()
             parameter = {
                 "name": name,
                 "type": v.get("type", "str"),  # 'str' by default, should be ok
@@ -810,9 +827,6 @@ class Definitions:
         else:
             dotted = ref
 
-        if dotted == "appliance.networking_change_task":
-            dotted = "appliance.networking_change$task"
-
         try:
             definition = self.definitions[dotted]
         except KeyError:
@@ -827,12 +841,7 @@ class Definitions:
 class Path:
     def __init__(self, path, value):
         super().__init__()
-        if path.startswith("/api/appliance"):
-            self.path = path
-        elif not path.startswith("/rest"):
-            self.path = "/rest" + path
-        else:
-            self.path = path
+        self.path = path
         self.operations = {}
         self.verb = {}
         self.value = value
@@ -861,11 +870,16 @@ class SwaggerFile:
 
         for path in [Path(p, v) for p, v in paths.items()]:
             if path.is_tech_preview():
-                print(f"Skipping {path.path} (Technology Preview)")
                 continue
             result[path.path] = path
             for verb, desc in path.value.items():
                 operationId = desc["operationId"]
+                if desc.get("deprecated"):
+                    continue
+                try:
+                    parameters = desc["parameters"]
+                except KeyError:
+                    print(f"No parameters for {operationId} {path.path}")
                 if path.path.startswith("/rest/vcenter/vm/{vm}/tools"):
                     if operationId == "upgrade":
                         print(f"Skipping {path.path} upgrade (broken)")
@@ -877,7 +891,7 @@ class SwaggerFile:
                 path.operations[operationId] = (
                     verb,
                     path.path,
-                    desc["parameters"],
+                    parameters,
                     desc["responses"],
                 )
         return result
@@ -891,18 +905,21 @@ class SwaggerFile:
                 continue
             if name not in resources:
                 resources[name] = Resource(name)
-                resources[name].description = ""  # path.summary(verb)
 
-            for k, v in path.operations.items():
-                if k in resources[name].operations:
-                    raise Exception(
-                        "operationId already defined: %s vs %s"
-                        % (resources[name].operations[k], v)
+            for operationId, v in path.operations.items():
+                verb = v[0]
+                resources[name].summary[operationId] = path.summary(verb)
+                if operationId in resources[name].operations:
+                    print(
+                        f"Cannot create operationId ({operationId}) with path "
+                        f"({verb}) {path.path}. already defined: "
+                        f"{resources[name].operations[operationId]}"
                     )
-                k = k.replace(
+                    continue
+                operationId = operationId.replace(
                     "$task", ""
                 )  # NOTE: Not sure if this is the right thing to do
-                resources[name].operations[k] = v
+                resources[name].operations[operationId] = v
         return resources
 
 
@@ -930,14 +947,12 @@ def main():
     for json_file in ["vcenter.json", "content.json", "appliance.json"]:
         print("Generating modules from {}".format(json_file))
         raw_content = pkg_resources.resource_string(
-            "vmware_rest_code_generator", f"api_specifications/7.0.0/{json_file}"
+            "vmware_rest_code_generator", f"api_specifications/7.0.2/{json_file}"
         )
         swagger_file = SwaggerFile(raw_content)
         resources = swagger_file.init_resources(swagger_file.paths.values())
 
         for resource in resources.values():
-            # if resource.name != "vcenter_vm":
-            #     continue
             if resource.name == "appliance_logging_forwarding":
                 continue
             if resource.name.startswith("vcenter_trustedinfrastructure"):
@@ -958,6 +973,7 @@ def main():
                     module_list.append(module.name)
 
             module = AnsibleModule(resource, definitions=swagger_file.definitions)
+
             if module.is_trusted() and len(module.default_operationIds) > 0:
                 module.renderer(target_dir=args.target_dir)
                 module_list.append(module.name)
@@ -971,6 +987,7 @@ def main():
     ignore_content += "plugins/module_utils/vmware_rest.py metaclass-boilerplate!skip\n"
     ignore_content += (
         "plugins/module_utils/vmware_rest.py future-import-boilerplate!skip\n"
+        "plugins/modules/vcenter_vm_guest_customization.py pep8!skip\n"  # E501: line too long (189 > 160 characters)
     )
     files = ["plugins/modules/{}.py".format(module) for module in module_list]
     for f in files:
@@ -986,7 +1003,7 @@ def main():
         ]:
             ignore_content += f"{f} {test}\n"
 
-    for version in ["2.9", "2.10"]:
+    for version in ["2.9", "2.10", "2.11"]:
         ignore_file = ignore_dir / f"ignore-{version}.txt"
         ignore_file.write_text(ignore_content)
 
