@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import pkg_resources
+from .content_library_data import content_library_static_ds
 
 
 def jinja2_renderer(template_file, **kwargs):
@@ -21,7 +22,7 @@ def jinja2_renderer(template_file, **kwargs):
 def normalize_parameter_name(name):
     # the in-query filter.* parameters are not valid Python variable names.
     # We replace the . with a _ to avoid problem,
-    return name.replace("filter.", "filter_")
+    return name.replace("filter.", "filter_").replace("~action", "action")
 
 
 class Description:
@@ -47,6 +48,13 @@ class Description:
         my_string = my_string.replace(" {@term enumerated type}", "")
         my_string = re.sub(r"{@name DayOfWeek}", "day of the week", my_string)
         my_string = re.sub(r": The\s\S+\senumerated type", ": This option", my_string)
+        my_string = re.sub(r" <p> ", " ", my_string)
+        my_string = re.sub(r"{@code true}", "C(True)", my_string)
+        my_string = re.sub(r"{@code false}", "C(False)", my_string)
+        my_string = re.sub(r"{@code\s+?(.*)}", r"C(\1)", my_string)
+        my_string = re.sub(r"{@param.name\s+?(.*)}", r"C(\1)", my_string)
+        for k in content_library_static_ds:
+            my_string = re.sub(k, content_library_static_ds[k], my_string)
         return my_string
 
     @classmethod
@@ -250,7 +258,7 @@ def format_documentation(documentation):
         "version_added",
         "requirements",
     ]
-    final = "'''\n"
+    final = "r'''\n"
     for i in keys:
         final += yaml.dump({i: _sanitize(documentation[i])}, indent=2)
     final += "'''"
@@ -445,8 +453,10 @@ class AnsibleModuleBase:
             "^vcenter_vm($|_.+)",
             "^vcenter_storage_policies_info$",
             "^vcenter_resourcepool*",
-            "^content_library_info$",
+            "^content_library_item_info$",
+            "^content_locallibrary$",
             "^content_locallibrary_info$",
+            "^content_subscribedlibrary$",
             "^content_subscribedlibrary_info$",
         ]
         if self.name in [
@@ -917,7 +927,7 @@ def main():
     args = parser.parse_args()
 
     module_list = []
-    for json_file in ["vcenter.json"]:
+    for json_file in ["vcenter.json", "content.json"]:
         print("Generating modules from {}".format(json_file))
         raw_content = pkg_resources.resource_string(
             "vmware_rest_code_generator", f"api_specifications/7.0.0/{json_file}"
