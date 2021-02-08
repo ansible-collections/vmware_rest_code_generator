@@ -1,12 +1,25 @@
 #!/usr/bin/env python3
 
 import argparse
+import jinja2
 import json
 import os
 import pathlib
 import re
 import shutil
 import subprocess
+import pkg_resources
+
+
+def jinja2_renderer(template_file, **kwargs):
+    templateLoader = jinja2.PackageLoader("vmware_rest_code_generator")
+    templateEnv = jinja2.Environment(loader=templateLoader)
+    template = templateEnv.get_template(template_file)
+    outputText = template.render(
+        kwargs
+    )  # this is where to put args to the template renderer
+    print(outputText)
+    return outputText
 
 
 def normalize_parameter_name(name):
@@ -685,116 +698,6 @@ class AnsibleModuleBase:
         )
 
     def renderer(self, target_dir):
-        DEFAULT_MODULE = """
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-# Copyright: Ansible Project
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
-# template: DEFAULT_MODULE
-
-DOCUMENTATION = {documentation}
-
-EXAMPLES = \"\"\"
-\"\"\"
-
-RETURN = \"\"\"
-\"\"\"
-
-# This structure describes the format of the data expected by the end-points
-PAYLOAD_FORMAT = {payload_format}  # pylint: disable=line-too-long
-
-import json
-import socket
-from ansible.module_utils.basic import env_fallback
-try:
-    from ansible_collections.cloud.common.plugins.module_utils.turbo.exceptions import EmbeddedModuleFailure
-    from ansible_collections.cloud.common.plugins.module_utils.turbo.module import AnsibleTurboModule as AnsibleModule
-except ImportError:
-    from ansible.module_utils.basic import AnsibleModule
-
-AnsibleModule.collection_name = "vmware.vmware_rest"
-
-from ansible_collections.vmware.vmware_rest.plugins.module_utils.vmware_rest import (
-    build_full_device_list,
-    exists,
-    gen_args,
-    get_device_info,
-    get_subdevice_type,
-    list_devices,
-    open_session,
-    prepare_payload,
-    update_changed_flag,
-    )
-
-
-
-def prepare_argument_spec():
-    argument_spec = {{
-        "vcenter_hostname": dict(
-            type='str',
-            required=True,
-            fallback=(env_fallback, ['VMWARE_HOST']),
-        ),
-        "vcenter_username": dict(
-            type='str',
-            required=True,
-            fallback=(env_fallback, ['VMWARE_USER']),
-        ),
-        "vcenter_password": dict(
-            type='str',
-            required=True,
-            no_log=True,
-            fallback=(env_fallback, ['VMWARE_PASSWORD']),
-        ),
-        "vcenter_validate_certs": dict(
-            type='bool',
-            required=False,
-            default=True,
-            fallback=(env_fallback, ['VMWARE_VALIDATE_CERTS']),
-        ),
-        "vcenter_rest_log_file": dict(
-            type='str',
-            required=False,
-            fallback=(env_fallback, ['VMWARE_REST_LOG_FILE']),
-        )
-    }}
-
-    {arguments}
-    return argument_spec
-
-
-async def main():
-    module_args = prepare_argument_spec()
-    module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
-    if not module.params['vcenter_hostname']:
-        module.fail_json('vcenter_hostname cannot be empty')
-    if not module.params['vcenter_username']:
-        module.fail_json('vcenter_username cannot be empty')
-    if not module.params['vcenter_password']:
-        module.fail_json('vcenter_password cannot be empty')
-    try:
-        session = await open_session(
-            vcenter_hostname=module.params['vcenter_hostname'],
-            vcenter_username=module.params['vcenter_username'],
-            vcenter_password=module.params['vcenter_password'],
-            validate_certs=module.params['vcenter_validate_certs'],
-            log_file=module.params['vcenter_rest_log_file'])
-    except EmbeddedModuleFailure as err:
-        module.fail_json(err.get_message())
-    result = await entry_point(module, session)
-    module.exit_json(**result)
-
-
-{url_func}
-
-{entry_point_func}
-
-if __name__ == '__main__':
-    import asyncio
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
-
-"""
         arguments = gen_arguments_py(self.parameters(), self.list_index())
         documentation = format_documentation(
             gen_documentation(self.name, self.description(), self.parameters())
@@ -802,13 +705,17 @@ if __name__ == '__main__':
         url_func = self.gen_url_func()
         entry_point_func = self.gen_entry_point_func()
 
-        module_content = DEFAULT_MODULE.format(
+        module_content = jinja2_renderer(
+            "default_module.j2",
             name=self.name,
             documentation=documentation,
-            url_func=_indent(url_func, 0),
-            entry_point_func=_indent(entry_point_func, 0),
+            # path=self.path(),
             arguments=_indent(arguments, 4),
             payload_format=self.payload(),
+            url_func=url_func,
+            entry_point_func=entry_point_func,
+            # list_index=self.list_index(),
+            # list_path=self.list_path(),
         )
 
         module_dir = target_dir / "plugins" / "modules"
@@ -1002,39 +909,6 @@ async def _create(params, session):
 
 
 class AnsibleInfoModule(AnsibleModuleBase):
-
-    URL_WITH_LIST = """
-# template: URL_WITH_LIST
-def build_url(params):
-    if params['{list_index}']:
-        _in_query_parameters = PAYLOAD_FORMAT["get"]["query"].keys()
-        return (
-            "https://{{vcenter_hostname}}"
-            "{path}").format(**params) + gen_args(params, _in_query_parameters)
-    _in_query_parameters = PAYLOAD_FORMAT["list"]["query"].keys()
-    return (
-        "https://{{vcenter_hostname}}"
-        "{list_path}").format(**params) + gen_args(params, _in_query_parameters)
-"""
-
-    URL_LIST_ONLY = """
-# template: URL_LIST_ONLY
-def build_url(params):
-    _in_query_parameters = PAYLOAD_FORMAT["list"]["query"].keys()
-    return (
-        "https://{{vcenter_hostname}}"
-        "{list_path}").format(**params) + gen_args(params, _in_query_parameters)
-"""
-
-    URL_WITH_ARGS = """
-# template: URL_WITH_ARGS
-def build_url(params):
-    _in_query_parameters = PAYLOAD_FORMAT["get"]["query"].keys()
-    return (
-        "https://{{vcenter_hostname}}"
-        "{path}").format(**params) + gen_args(params, _in_query_parameters)
-"""
-
     def __init__(self, resource, definitions):
         super().__init__(resource, definitions)
         self.name = resource.name + "_info"
@@ -1043,51 +917,66 @@ def build_url(params):
     def parameters(self):
         return [i for i in list(super().parameters()) if i["name"] != "state"]
 
-    def gen_url_func(self):
-        path = None
+    def path(self):
+        return list(self.resource.operations.values())[0][1]
+
+    def list_path(self):
         list_path = None
-        if "get" in self.resource.operations:
-            path = self.resource.operations["get"][1]
         if "list" in self.resource.operations:
             list_path = self.resource.operations["list"][1]
 
-        if path and not path.startswith("/rest"):  # Pre 7.0.0
-            path = "/rest" + path
         if list_path and not list_path.startswith("/rest"):  # Pre 7.0.0
             list_path = "/rest" + list_path
 
-        if not path:
-            return self.URL_LIST_ONLY.format(list_path=list_path)
-        if list_path and path.endswith("}"):
-            return self.URL_WITH_LIST.format(
-                path=path, list_path=list_path, list_index=self.list_index(),
-            )
-        return self.URL_WITH_ARGS.format(path=path)
+        return list_path
 
-    def gen_entry_point_func(self):
-        FUNC = """
-# template: FUNC
-async def entry_point(module, session):
-    url = build_url(module.params)
-    async with session.get(url) as resp:
-        _json = await resp.json()
-        if module.params.get("{list_index}"):
-            _json["id"] = module.params.get("{list_index}")
-        elif module.params.get("label"):  # TODO extend the list of filter
-            _json = await exists(module.params, session, url)
-        else: # list context, retrieve the details of each entry
-            try:
-                if isinstance(_json["value"][0]["{list_index}"], str) and len(list(_json["value"][0].values())) == 1:
-                    # this is a list of id, we fetch the details
-                    full_device_list = await build_full_device_list(session, url, _json)
-                    _json = {{"value": [i["value"] for i in full_device_list]}}
-            except (TypeError, KeyError, IndexError):
-                pass
 
-        return await update_changed_flag(_json, resp.status, "get")
-"""
-        template = FUNC if self.list_index() else FUNC
-        return template.format(name=self.name, list_index=self.list_index())
+class AnsibleInfoNoListModule(AnsibleInfoModule):
+    def renderer(self, target_dir):
+        arguments = gen_arguments_py(self.parameters(), self.list_index())
+        documentation = format_documentation(
+            gen_documentation(self.name, self.description(), self.parameters())
+        )
+        module_content = jinja2_renderer(
+            "info_no_list_module.j2",
+            name=self.name,
+            documentation=documentation,
+            path=self.path(),
+            arguments=_indent(arguments, 4),
+            payload_format=self.payload(),
+            list_index=self.list_index(),
+            list_path=self.list_path(),
+        )
+
+        module_dir = target_dir / "plugins" / "modules"
+        module_dir.mkdir(parents=True, exist_ok=True)
+        module_py_file = module_dir / "{name}.py".format(name=self.name)
+        with module_py_file.open("w") as fd:
+            fd.write(module_content)
+
+
+class AnsibleInfoListOnlyModule(AnsibleInfoModule):
+    def renderer(self, target_dir):
+        arguments = gen_arguments_py(self.parameters(), self.list_index())
+        documentation = format_documentation(
+            gen_documentation(self.name, self.description(), self.parameters())
+        )
+        module_content = jinja2_renderer(
+            "info_list_and_get_module.j2",
+            name=self.name,
+            documentation=documentation,
+            path=self.path(),
+            arguments=_indent(arguments, 4),
+            payload_format=self.payload(),
+            list_index=self.list_index(),
+            list_path=self.list_path(),
+        )
+
+        module_dir = target_dir / "plugins" / "modules"
+        module_dir.mkdir(parents=True, exist_ok=True)
+        module_py_file = module_dir / "{name}.py".format(name=self.name)
+        with module_py_file.open("w") as fd:
+            fd.write(module_content)
 
 
 class Definitions:
@@ -1212,12 +1101,7 @@ def main():
     args = parser.parse_args()
 
     module_list = []
-    if os.environ.get("VIRTUAL_ENV"):
-        data_dir = pathlib.Path(
-            f"{os.environ['VIRTUAL_ENV']}/vmware_rest_code_generator"
-        )
-    else:
-        data_dir = pathlib.Path(".")
+    data_dir = pathlib.Path("/home/goneri/git_repos/vmware_rest_code_generator")
     api_specification_dir = data_dir / "api_specifications" / "7.0.0"
     for json_file in api_specification_dir.glob("vcenter.json"):
         print("Generating modules from {}".format(json_file))
@@ -1231,13 +1115,21 @@ def main():
                 continue
             if resource.name.startswith("vcenter_trustedinfrastructure"):
                 continue
-            if "get" in resource.operations or "list" in resource.operations:
-                module = AnsibleInfoModule(
+            if "get" in resource.operations and "list" in resource.operations:
+                module = AnsibleInfoListOnlyModule(
                     resource, definitions=swagger_file.definitions
                 )
                 if module.is_trusted() and len(module.default_operationIds) > 0:
                     module.renderer(target_dir=args.target_dir)
                     module_list.append(module.name)
+            elif "get" in resource.operations:
+                module = AnsibleInfoNoListModule(
+                    resource, definitions=swagger_file.definitions
+                )
+                if module.is_trusted() and len(module.default_operationIds) > 0:
+                    module.renderer(target_dir=args.target_dir)
+                    module_list.append(module.name)
+
             module = AnsibleModule(resource, definitions=swagger_file.definitions)
             if module.is_trusted() and len(module.default_operationIds) > 0:
                 module.renderer(target_dir=args.target_dir)
