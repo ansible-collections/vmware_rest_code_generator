@@ -1020,13 +1020,12 @@ class Path:
 
 
 class SwaggerFile:
-    def __init__(self, file_path):
+    def __init__(self, raw_content):
         super().__init__()
         self.resources = {}
-        with file_path.open() as fd:
-            json_content = json.load(fd)
-            self.definitions = Definitions(json_content["definitions"])
-            self.paths = self.load_paths(json_content["paths"])
+        json_content = json.loads(raw_content)
+        self.definitions = Definitions(json_content["definitions"])
+        self.paths = self.load_paths(json_content["paths"])
 
     @staticmethod
     def load_paths(paths):
@@ -1097,11 +1096,12 @@ def main():
     args = parser.parse_args()
 
     module_list = []
-    data_dir = pathlib.Path("/home/goneri/git_repos/vmware_rest_code_generator")
-    api_specification_dir = data_dir / "api_specifications" / "7.0.0"
-    for json_file in api_specification_dir.glob("vcenter.json"):
+    for json_file in ["vcenter.json"]:
         print("Generating modules from {}".format(json_file))
-        swagger_file = SwaggerFile(json_file)
+        raw_content = pkg_resources.resource_string(
+            "vmware_rest_code_generator", f"api_specifications/7.0.0/{json_file}"
+        )
+        swagger_file = SwaggerFile(raw_content)
         resources = swagger_file.init_resources(swagger_file.paths.values())
 
         for resource in resources.values():
@@ -1180,9 +1180,12 @@ def main():
         ).format(git_revision=git_revision())
     )
 
-    vmware_rest_src = data_dir / "module_utils" / "vmware_rest.py"
     vmware_rest_dest = args.target_dir / "plugins" / "module_utils" / "vmware_rest.py"
-    vmware_rest_dest.write_text(vmware_rest_src.read_text())
+    vmware_rest_dest.write_bytes(
+        pkg_resources.resource_string(
+            "vmware_rest_code_generator", "module_utils/vmware_rest.py"
+        )
+    )
 
 
 if __name__ == "__main__":
