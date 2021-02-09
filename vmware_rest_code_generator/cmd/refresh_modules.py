@@ -15,11 +15,7 @@ def jinja2_renderer(template_file, **kwargs):
     templateLoader = jinja2.PackageLoader("vmware_rest_code_generator")
     templateEnv = jinja2.Environment(loader=templateLoader)
     template = templateEnv.get_template(template_file)
-    outputText = template.render(
-        kwargs
-    )  # this is where to put args to the template renderer
-    print(outputText)
-    return outputText
+    return template.render(kwargs)
 
 
 def normalize_parameter_name(name):
