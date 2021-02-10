@@ -739,23 +739,7 @@ def build_url(params):
         )
 
     def gen_entry_point_func(self):
-        main_content = """
-# template: main_content
-async def entry_point(module, session):
-    if module.params['state'] == "present":
-        if "_create" in globals():
-            operation = "create"
-        else:
-            operation = "update"
-    elif module.params['state'] == "absent":
-        operation = "delete"
-    else:
-        operation = module.params['state']
-
-    func = globals()["_" + operation]
-    return await func(module.params, session)
-
-"""
+        main_content = ""
 
         for operation in sorted(self.default_operationIds):
             (verb, path, _, _) = self.resource.operations[operation]

@@ -95,7 +95,26 @@ async def main():
     module.exit_json(**result)
 
 
-{{url_func}}
+def build_url(params):
+    return (
+        "https://{vcenter_hostname}"
+        "{{path}}").format(**params)
+
+
+async def entry_point(module, session):
+    if module.params['state'] == "present":
+        if "_create" in globals():
+            operation = "create"
+        else:
+            operation = "update"
+    elif module.params['state'] == "absent":
+        operation = "delete"
+    else:
+        operation = module.params['state']
+
+    func = globals()["_" + operation]
+    return await func(module.params, session)
+
 
 {{entry_point_func}}
 
