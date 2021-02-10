@@ -426,6 +426,9 @@ class AnsibleModuleBase:
         print(f"generic description: {self.name}")
         return f"Handle resource of type {self.name}"
 
+    def get_path(self):
+        return list(self.resource.operations.values())[0][1]
+
     def is_trusted(self):
         trusted_module_allowlist = [
             "^vcenter_cluster_info$",
@@ -602,15 +605,6 @@ class AnsibleModuleBase:
 
         return sorted(results.values(), key=lambda item: item["name"])
 
-    def gen_url_func(self):
-        first_operation = list(self.resource.operations.values())[0]
-        path = first_operation[1]
-
-        if not path.startswith("/rest"):  # Pre 7.0.0
-            path = "/rest" + path
-
-        return self.URL.format(path=path)
-
     @staticmethod
     def _property_to_parameter(prop_struct, definitions):
         properties = flatten_ref(prop_struct, definitions)
@@ -698,17 +692,15 @@ class AnsibleModuleBase:
         documentation = format_documentation(
             gen_documentation(self.name, self.description(), self.parameters())
         )
-        url_func = self.gen_url_func()
         entry_point_func = self.gen_entry_point_func()
 
         module_content = jinja2_renderer(
             "default_module.j2",
             name=self.name,
             documentation=documentation,
-            # path=self.path(),
             arguments=_indent(arguments, 4),
             payload_format=self.payload(),
-            url_func=url_func,
+            path=self.get_path(),
             entry_point_func=entry_point_func,
             # list_index=self.list_index(),
             # list_path=self.list_path(),
@@ -722,15 +714,6 @@ class AnsibleModuleBase:
 
 
 class AnsibleModule(AnsibleModuleBase):
-
-    URL = """
-# template: URL
-def build_url(params):
-    return (
-        "https://{{vcenter_hostname}}"
-        "{path}").format(**params)
-"""
-
     def __init__(self, resource, definitions):
         super().__init__(resource, definitions)
         # TODO: We can probably do better
@@ -759,8 +742,6 @@ async def entry_point(module, session):
 
         for operation in sorted(self.default_operationIds):
             (verb, path, _, _) = self.resource.operations[operation]
-            if not path.startswith("/rest"):  # TODO
-                path = "/rest" + path
             if "$" in operation:
                 print(
                     "skipping operation {operation} for {path}".format(
@@ -913,16 +894,10 @@ class AnsibleInfoModule(AnsibleModuleBase):
     def parameters(self):
         return [i for i in list(super().parameters()) if i["name"] != "state"]
 
-    def path(self):
-        return list(self.resource.operations.values())[0][1]
-
     def list_path(self):
         list_path = None
         if "list" in self.resource.operations:
             list_path = self.resource.operations["list"][1]
-
-        if list_path and not list_path.startswith("/rest"):  # Pre 7.0.0
-            list_path = "/rest" + list_path
 
         return list_path
 
@@ -937,7 +912,7 @@ class AnsibleInfoNoListModule(AnsibleInfoModule):
             "info_no_list_module.j2",
             name=self.name,
             documentation=documentation,
-            path=self.path(),
+            path=self.get_path(),
             arguments=_indent(arguments, 4),
             payload_format=self.payload(),
             list_index=self.list_index(),
@@ -961,7 +936,7 @@ class AnsibleInfoListOnlyModule(AnsibleInfoModule):
             "info_list_and_get_module.j2",
             name=self.name,
             documentation=documentation,
-            path=self.path(),
+            path=self.get_path(),
             arguments=_indent(arguments, 4),
             payload_format=self.payload(),
             list_index=self.list_index(),
@@ -1004,7 +979,10 @@ class Definitions:
 class Path:
     def __init__(self, path, value):
         super().__init__()
-        self.path = path
+        if not path.startswith("/rest"):
+            self.path = "/rest" + path
+        else:
+            self.path = path
         self.operations = {}
         self.verb = {}
         self.value = value
