@@ -706,7 +706,8 @@ class AnsibleModuleBase:
             payload_format=self.payload(),
             path=self.get_path(),
             entry_point_func=entry_point_func,
-            # list_index=self.list_index(),
+            operations=self.resource.operations,
+            list_index=self.list_index(),
             # list_path=self.list_path(),
         )
 
@@ -760,111 +761,9 @@ async def _{operation}(params, session):
         return await update_changed_flag(_json, resp.status, "{operation}")
 """
 
-            FUNC_WITH_DATA_DELETE_TPL = """
-# template: FUNC_WITH_DATA_DELETE_TPL
-async def _{operation}(params, session):
-    _in_query_parameters = PAYLOAD_FORMAT["{operation}"]["query"].keys()
-    payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
-    subdevice_type = get_subdevice_type("{path}")
-    if subdevice_type and not params[subdevice_type]:
-        _json = (await exists(params, session, build_url(params)))
-        if _json:
-            params[subdevice_type] = _json['id']
-    _url = (
-        "https://{{vcenter_hostname}}"
-        "{path}").format(**params) + gen_args(params, _in_query_parameters)
-    async with session.{verb}(_url, json=payload) as resp:
-        try:
-            if resp.headers["Content-Type"] == "application/json":
-                _json = await resp.json()
-        except KeyError:
-            _json = {{}}
-        return await update_changed_flag(_json, resp.status, "{operation}")
-"""
-
-            FUNC_WITH_DATA_UPDATE_TPL = """
-# FUNC_WITH_DATA_UPDATE_TPL
-async def _update(params, session):
-    payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
-    _url = (
-        "https://{{vcenter_hostname}}"
-        "{path}").format(**params)
-    async with session.get(_url) as resp:
-        _json = await resp.json()
-        for k, v in _json["value"].items():
-            if k in payload and payload[k] == v:
-                del payload[k]
-            elif "spec" in payload:
-                if k in payload["spec"] and payload["spec"][k] == v:
-                    del payload["spec"][k]
-
-        # NOTE: workaround for vcenter_vm_hardware, upgrade_version needs the upgrade_policy
-        # option. So we ensure it's here.
-        try:
-            if payload["spec"]["upgrade_version"] and "upgrade_policy" not in payload["spec"]:
-                payload["spec"]["upgrade_policy"] = _json["value"]["upgrade_policy"]
-        except KeyError:
-            pass
-
-        if payload == {{}} or payload == {{"spec": {{}}}}:
-            # Nothing has changed
-            _json["id"] = params.get("{list_index}")
-            return await update_changed_flag(_json, resp.status, "get")
-    async with session.{verb}(_url, json=payload) as resp:
-        try:
-            if resp.headers["Content-Type"] == "application/json":
-                _json = await resp.json()
-        except KeyError:
-            _json = {{}}
-        _json["id"] = params.get("{list_index}")
-        return await update_changed_flag(_json, resp.status, "{operation}")
-"""
-
-            FUNC_WITH_DATA_CREATE_TPL = """
-# FUNC_WITH_DATA_CREATE_TPL
-async def _create(params, session):
-    if params["{list_index}"]:
-        _json = await get_device_info(session, build_url(params), params["{list_index}"])
-    else:
-        _json = await exists(params, session, build_url(params), ["{list_index}"])
-    if _json:
-        if "_update" in globals():
-            params["{list_index}"] = _json["id"]
-            return (await globals()["_update"](params, session))
-        return (await update_changed_flag(_json, 200, 'get'))
-
-    payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
-    _url = (
-        "https://{{vcenter_hostname}}"
-        "{path}").format(**params)
-    async with session.{verb}(_url, json=payload) as resp:
-        if resp.status == 500:
-            text = await resp.text()
-            raise EmbeddedModuleFailure(f"Request has failed: status={{resp.status}}, {{text}}")
-        try:
-            if resp.headers["Content-Type"] == "application/json":
-                _json = await resp.json()
-        except KeyError:
-            _json = {{}}
-        # Update the value field with all the details
-        if (resp.status in [200, 201]) and "value" in _json:
-            if isinstance(_json["value"], dict):
-                _id = list(_json["value"].values())[0]
-            else:
-                _id = _json["value"]
-            _json = await get_device_info(session, _url, _id)
-
-        return await update_changed_flag(_json, resp.status, "{operation}")
-"""
-
-            if operation == "delete":
-                template = FUNC_WITH_DATA_DELETE_TPL
-            elif operation == "create":
-                template = FUNC_WITH_DATA_CREATE_TPL
-            elif operation == "update":
-                template = FUNC_WITH_DATA_UPDATE_TPL
-            else:
-                template = FUNC_WITH_DATA_TPL
+            if operation in ["create", "update", "delete"]:
+                continue
+            template = FUNC_WITH_DATA_TPL
 
             main_content += template.format(
                 operation=operation, verb=verb, path=path, list_index=self.list_index(),
