@@ -696,7 +696,6 @@ class AnsibleModuleBase:
         documentation = format_documentation(
             gen_documentation(self.name, self.description(), self.parameters())
         )
-        entry_point_func = self.gen_entry_point_func()
 
         module_content = jinja2_renderer(
             "default_module.j2",
@@ -705,7 +704,6 @@ class AnsibleModuleBase:
             arguments=_indent(arguments, 4),
             payload_format=self.payload(),
             path=self.get_path(),
-            entry_point_func=entry_point_func,
             operations=self.resource.operations,
             list_index=self.list_index(),
             # list_path=self.list_path(),
@@ -725,51 +723,6 @@ class AnsibleModule(AnsibleModuleBase):
         self.default_operationIds = set(list(self.resource.operations.keys())) - set(
             ["get", "list"]
         )
-
-    def gen_entry_point_func(self):
-        main_content = ""
-
-        for operation in sorted(self.default_operationIds):
-            (verb, path, _, _) = self.resource.operations[operation]
-            if "$" in operation:
-                print(
-                    "skipping operation {operation} for {path}".format(
-                        operation=operation, path=path
-                    )
-                )
-                continue
-
-            FUNC_WITH_DATA_TPL = """
-# template: FUNC_WITH_DATA_TPL
-async def _{operation}(params, session):
-    _in_query_parameters = PAYLOAD_FORMAT["{operation}"]["query"].keys()
-    payload = prepare_payload(params, PAYLOAD_FORMAT["{operation}"])
-    subdevice_type = get_subdevice_type("{path}")
-    if subdevice_type and not params[subdevice_type]:
-        _json = (await exists(params, session, build_url(params)))
-        if _json:
-            params[subdevice_type] = _json['id']
-    _url = (
-        "https://{{vcenter_hostname}}"
-        "{path}").format(**params) + gen_args(params, _in_query_parameters)
-    async with session.{verb}(_url, json=payload) as resp:
-        try:
-            if resp.headers["Content-Type"] == "application/json":
-                _json = await resp.json()
-        except KeyError:
-            _json = {{}}
-        return await update_changed_flag(_json, resp.status, "{operation}")
-"""
-
-            if operation in ["create", "update", "delete"]:
-                continue
-            template = FUNC_WITH_DATA_TPL
-
-            main_content += template.format(
-                operation=operation, verb=verb, path=path, list_index=self.list_index(),
-            )
-
-        return main_content
 
 
 class AnsibleInfoModule(AnsibleModuleBase):
