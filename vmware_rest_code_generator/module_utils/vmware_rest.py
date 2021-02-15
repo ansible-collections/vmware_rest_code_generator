@@ -2,7 +2,6 @@ import hashlib
 import importlib
 from ansible.module_utils.basic import missing_required_lib
 from ansible.module_utils.parsing.convert_bool import boolean
-from ansible.module_utils.six import string_types
 
 
 async def open_session(
@@ -180,7 +179,7 @@ async def build_full_device_list(session, url, device_list):
     device_ids = []
     for i in device_list["value"]:
         # Content library returns string {"value": "library_id"}
-        if isinstance(i, string_types):
+        if isinstance(i, str):
             return device_list
         fields = list(i.values())
         if len(fields) != 1:
