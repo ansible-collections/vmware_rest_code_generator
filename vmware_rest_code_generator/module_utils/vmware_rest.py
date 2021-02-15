@@ -178,8 +178,10 @@ async def build_full_device_list(session, url, device_list):
 
     device_ids = []
     for i in device_list["value"]:
+        # Content library returns string {"value": "library_id"}
+        if isinstance(i, str):
+            return device_list
         fields = list(i.values())
-        key = list(i.keys())[0]
         if len(fields) != 1:
             # The list already comes with all the details
             return device_list

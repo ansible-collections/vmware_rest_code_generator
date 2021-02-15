@@ -374,7 +374,7 @@ def test_python_type():
 
 def test_format_documentation():
 
-    expectation = """'''
+    expectation = """r'''
 module: foo
 short_description: bar
 description: bar
@@ -432,7 +432,7 @@ def test_format_documentation_quote():
         "version_added": "a",
         "requirements": "a",
     }
-    expectation = """\'\'\'
+    expectation = """r\'\'\'
 module: a
 short_description: a
 description: ':'
