@@ -619,6 +619,10 @@ class AnsibleModuleBase:
         elif states:
             results["state"]["required"] = True
 
+        # There is just one possible operation, we remove the "state" parameter
+        if len(self.resource.operations) == 1:
+            del results["state"]
+
         return sorted(results.values(), key=lambda item: item["name"])
 
     @staticmethod
@@ -704,13 +708,28 @@ class AnsibleModuleBase:
             parameters, key=lambda item: (item["name"], item.get("description"))
         )
 
+    def write_module(self, target_dir, content):
+        module_dir = target_dir / "plugins" / "modules"
+        module_dir.mkdir(parents=True, exist_ok=True)
+        module_py_file = module_dir / "{name}.py".format(name=self.name)
+        module_py_file.write_text(content)
+
+
+class AnsibleModule(AnsibleModuleBase):
+    def __init__(self, resource, definitions):
+        super().__init__(resource, definitions)
+        # TODO: We can probably do better
+        self.default_operationIds = set(list(self.resource.operations.keys())) - set(
+            ["get", "list"]
+        )
+
     def renderer(self, target_dir):
         arguments = gen_arguments_py(self.parameters(), self.list_index())
         documentation = format_documentation(
             gen_documentation(self.name, self.description(), self.parameters())
         )
 
-        module_content = jinja2_renderer(
+        content = jinja2_renderer(
             "default_module.j2",
             name=self.name,
             documentation=documentation,
@@ -722,20 +741,7 @@ class AnsibleModuleBase:
             # list_path=self.list_path(),
         )
 
-        module_dir = target_dir / "plugins" / "modules"
-        module_dir.mkdir(parents=True, exist_ok=True)
-        module_py_file = module_dir / "{name}.py".format(name=self.name)
-        with module_py_file.open("w") as fd:
-            fd.write(module_content)
-
-
-class AnsibleModule(AnsibleModuleBase):
-    def __init__(self, resource, definitions):
-        super().__init__(resource, definitions)
-        # TODO: We can probably do better
-        self.default_operationIds = set(list(self.resource.operations.keys())) - set(
-            ["get", "list"]
-        )
+        self.write_module(target_dir, content)
 
 
 class AnsibleInfoModule(AnsibleModuleBase):
@@ -761,7 +767,7 @@ class AnsibleInfoNoListModule(AnsibleInfoModule):
         documentation = format_documentation(
             gen_documentation(self.name, self.description(), self.parameters())
         )
-        module_content = jinja2_renderer(
+        content = jinja2_renderer(
             "info_no_list_module.j2",
             name=self.name,
             documentation=documentation,
@@ -772,11 +778,7 @@ class AnsibleInfoNoListModule(AnsibleInfoModule):
             list_path=self.list_path(),
         )
 
-        module_dir = target_dir / "plugins" / "modules"
-        module_dir.mkdir(parents=True, exist_ok=True)
-        module_py_file = module_dir / "{name}.py".format(name=self.name)
-        with module_py_file.open("w") as fd:
-            fd.write(module_content)
+        self.write_module(target_dir, content)
 
 
 class AnsibleInfoListOnlyModule(AnsibleInfoModule):
@@ -785,7 +787,7 @@ class AnsibleInfoListOnlyModule(AnsibleInfoModule):
         documentation = format_documentation(
             gen_documentation(self.name, self.description(), self.parameters())
         )
-        module_content = jinja2_renderer(
+        content = jinja2_renderer(
             "info_list_and_get_module.j2",
             name=self.name,
             documentation=documentation,
@@ -796,11 +798,7 @@ class AnsibleInfoListOnlyModule(AnsibleInfoModule):
             list_path=self.list_path(),
         )
 
-        module_dir = target_dir / "plugins" / "modules"
-        module_dir.mkdir(parents=True, exist_ok=True)
-        module_py_file = module_dir / "{name}.py".format(name=self.name)
-        with module_py_file.open("w") as fd:
-            fd.write(module_content)
+        self.write_module(target_dir, content)
 
 
 class Definitions:
@@ -942,7 +940,7 @@ def main():
                 continue
             if resource.name.startswith("vcenter_trustedinfrastructure"):
                 continue
-            if "get" in resource.operations and "list" in resource.operations:
+            if "list" in resource.operations:
                 module = AnsibleInfoListOnlyModule(
                     resource, definitions=swagger_file.definitions
                 )

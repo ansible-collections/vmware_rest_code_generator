@@ -106,6 +106,7 @@ def build_url(params):
 
 
 async def entry_point(module, session):
+    {% if operations|length > 1 %}
     if module.params['state'] == "present":
         if "_create" in globals():
             operation = "create"
@@ -117,6 +118,9 @@ async def entry_point(module, session):
         operation = module.params['state']
 
     func = globals()["_" + operation]
+    {% else %}
+    func = globals()["_{{operations.keys()|list|first}}"]
+    {% endif %}
     return await func(module.params, session)
 
 {% for operation in operations|sort -%}
@@ -219,7 +223,7 @@ async def _update(params, session):
             _json = {}
         _json["id"] = params.get("{{list_index}}")
         return await update_changed_flag(_json, resp.status, "update")
-{% else %}
+{% elif operation not in ["get", "list"] %}
 
 async def _{{ operation }}(params, session):
     _in_query_parameters = PAYLOAD_FORMAT["{{ operation }}"]["query"].keys()

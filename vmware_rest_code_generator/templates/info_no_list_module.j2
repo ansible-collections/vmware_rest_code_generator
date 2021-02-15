@@ -112,12 +112,10 @@ def build_url(params):
         "{{path}}").format(**params)
 
 
-# template: main_content
 async def entry_point(module, session):
     return await _info(module.params, session)
 
 
-# template: FUNC_WITH_DATA_TPL
 async def _info(params, session):
     payload_format = list(PAYLOAD_FORMAT.values())[0]
     _in_query_parameters = payload_format["query"].keys()
@@ -131,7 +129,7 @@ async def _info(params, session):
                 _json = await resp.json()
         except KeyError:
             _json = {}
-        return await update_changed_flag(_json, resp.status, "lastcheck")
+        return await update_changed_flag(_json, resp.status, "get")
 
 
 if __name__ == "__main__":
