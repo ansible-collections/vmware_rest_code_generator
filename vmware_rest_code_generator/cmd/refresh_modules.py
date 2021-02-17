@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+from typing import DefaultDict
 import jinja2
 import json
 import os
@@ -585,18 +586,18 @@ class AnsibleModuleBase:
                 result["enum"] = sorted(set(result["enum"]))
             if result.get("required"):
                 if (
-                    len(
-                        set(self.default_operationIds)
-                        - set(result["operationIds"])
-                        - set(["list", "get"])
-                    )
+                    len(set(self.default_operationIds) - set(result["operationIds"]))
                     > 0
                 ):
                     result["description"] += " Required with I(state={})".format(
                         ansible_state(result["operationIds"])
                     )
-                del result["required"]
-                result["required_if"] = ansible_state(result["operationIds"])
+                    result["_required_with_states"] = ansible_state(
+                        result["operationIds"]
+                    )
+                    del result["required"]
+                else:
+                    result["description"] += " This parameter is mandatory."
 
         states = []
         for operation in sorted(list(self.default_operationIds)):
@@ -630,7 +631,9 @@ class AnsibleModuleBase:
         properties = flatten_ref(prop_struct, definitions)
 
         def get_next(properties):
+            required_keys = []
             for i, v in enumerate(properties):
+                required = v.get("required")
                 if "schema" in v:
                     if "properties" in v["schema"]:
                         properties[i] = v["schema"]["properties"]
@@ -647,7 +650,7 @@ class AnsibleModuleBase:
                     yield v, {}, [], []
 
                 elif "spec" in v and "properties" in v["spec"]:
-                    required_keys = []
+                    required_keys = required_keys or []
                     if "required" in v["spec"]:
                         required_keys = v["spec"]["required"]
                     for name, property in v["spec"]["properties"].items():
@@ -660,7 +663,7 @@ class AnsibleModuleBase:
                     yield v["name"], v, [], v.get("required")
                 elif isinstance(v, dict):
                     for k, data in v.items():
-                        yield k, data, [], data.get("required")
+                        yield k, data, [], k in required_keys or data.get("required")
 
         parameters = []
 
@@ -677,10 +680,13 @@ class AnsibleModuleBase:
                 parameter["enum"] = v["enum"]
 
             sub_items = None
+            required_subkeys = v.get("required", [])
             if "properties" in v:
                 sub_items = v["properties"]
+                required_subkeys = v["properties"].get("required", [])
             elif "items" in v and "properties" in v["items"]:
                 sub_items = v["items"]["properties"]
+                required_subkeys = v["items"].get("required", [])
             elif "items" in v and "name" not in v["items"]:
                 parameter["elements"] = v["items"].get("type", "str")
             elif "items" in v and v["items"]["name"]:
@@ -693,7 +699,7 @@ class AnsibleModuleBase:
                         "name": sub_k,
                         "type": sub_v["type"],
                         "description": sub_v.get("description", ""),
-                        "required": True if sub_k in v.get("required", []) else False,
+                        "required": True if sub_k in required_subkeys else False,
                     }
                     if "enum" in sub_v:
                         subkey["enum"] = sub_v["enum"]
@@ -715,6 +721,17 @@ class AnsibleModuleBase:
         module_py_file.write_text(content)
 
 
+def gen_required_if(parameters):
+    by_state = DefaultDict(list)
+    for parameter in parameters:
+        for state in parameter.get("_required_with_states", []):
+            by_state[state].append(parameter["name"])
+    entries = []
+    for state, fields in by_state.items():
+        entries.append(["state", state, fields, True])
+    return entries
+
+
 class AnsibleModule(AnsibleModuleBase):
     def __init__(self, resource, definitions):
         super().__init__(resource, definitions)
@@ -728,6 +745,7 @@ class AnsibleModule(AnsibleModuleBase):
         documentation = format_documentation(
             gen_documentation(self.name, self.description(), self.parameters())
         )
+        required_if = gen_required_if(self.parameters())
 
         content = jinja2_renderer(
             "default_module.j2",
@@ -738,7 +756,7 @@ class AnsibleModule(AnsibleModuleBase):
             path=self.get_path(),
             operations=self.resource.operations,
             list_index=self.list_index(),
-            # list_path=self.list_path(),
+            required_if=required_if,
         )
 
         self.write_module(target_dir, content)
@@ -767,6 +785,8 @@ class AnsibleInfoNoListModule(AnsibleInfoModule):
         documentation = format_documentation(
             gen_documentation(self.name, self.description(), self.parameters())
         )
+        required_if = gen_required_if(self.parameters())
+
         content = jinja2_renderer(
             "info_no_list_module.j2",
             name=self.name,
@@ -776,6 +796,7 @@ class AnsibleInfoNoListModule(AnsibleInfoModule):
             payload_format=self.payload(),
             list_index=self.list_index(),
             list_path=self.list_path(),
+            required_if=required_if,
         )
 
         self.write_module(target_dir, content)
@@ -787,6 +808,8 @@ class AnsibleInfoListOnlyModule(AnsibleInfoModule):
         documentation = format_documentation(
             gen_documentation(self.name, self.description(), self.parameters())
         )
+        required_if = gen_required_if(self.parameters())
+
         content = jinja2_renderer(
             "info_list_and_get_module.j2",
             name=self.name,
@@ -796,6 +819,7 @@ class AnsibleInfoListOnlyModule(AnsibleInfoModule):
             payload_format=self.payload(),
             list_index=self.list_index(),
             list_path=self.list_path(),
+            required_if=required_if,
         )
 
         self.write_module(target_dir, content)
@@ -870,6 +894,10 @@ class SwaggerFile:
                 operationId = desc["operationId"]
                 if path.path.startswith("/rest/vcenter/vm/{vm}/tools"):
                     if operationId == "upgrade":
+                        print(f"Skipping {path.path} upgrade (broken)")
+                        continue
+                if path.path == "/api/appliance/infraprofile/configs":
+                    if operationId == "validate$task":
                         print(f"Skipping {path.path} upgrade (broken)")
                         continue
                 path.operations[operationId] = (
