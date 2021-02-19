@@ -623,11 +623,11 @@ def test_AnsibleInfoModule_parameters():
         },
         {
             "_loc_in_payload": "vm",
-            "description": "Id of the VM",
+            "_required_with_states": ["get"],
+            "description": "Id of the VM Required with I(state=['get'])",
             "in": "path",
             "name": "vm",
             "operationIds": ["get"],
-            "required_if": ["get"],
             "type": "string",
         },
     ]
@@ -655,22 +655,22 @@ def test_AnsibleModule_parameters_complex():
     assert module.parameters() == [
         {
             "_loc_in_payload": "action",
-            "description": "action=check-out",
+            "description": "action=check-out This parameter is mandatory.",
             "enum": ["check-in", "check-out"],
             "in": "query",
             "name": "action",
             "operationIds": ["check_in", "check_out"],
-            "required_if": ["check_in", "check_out"],
+            "required": True,
             "type": "string",
         },
         {
             "_loc_in_payload": "spec/message",
+            "_required_with_states": ["check_in"],
             "description": "Message describing the changes made to the virtual machine. "
             "Required with I(state=['check_in'])",
             "in": None,
             "name": "message",
             "operationIds": ["check_in"],
-            "required_if": ["check_in"],
             "type": "string",
         },
         {
@@ -752,21 +752,21 @@ def test_AnsibleModule_parameters_complex():
         {
             "_loc_in_payload": "template_library_item",
             "description": "Identifier of the content library item containing the source "
-            "virtual machine template to be checked out.",
+            "virtual machine template to be checked out. This parameter is mandatory.",
             "in": "path",
             "name": "template_library_item",
             "operationIds": ["check_in", "check_out"],
-            "required_if": ["check_in", "check_out"],
+            "required": True,
             "type": "string",
         },
         {
             "_loc_in_payload": "vm",
+            "_required_with_states": ["check_in"],
             "description": "Identifier of the virtual machine to check into the library "
             "item. Required with I(state=['check_in'])",
             "in": "path",
             "name": "vm",
             "operationIds": ["check_in"],
-            "required_if": ["check_in"],
             "type": "string",
         },
     ]
