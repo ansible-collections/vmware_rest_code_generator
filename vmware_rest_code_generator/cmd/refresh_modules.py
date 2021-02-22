@@ -714,11 +714,40 @@ class AnsibleModuleBase:
             parameters, key=lambda item: (item["name"], item.get("description"))
         )
 
+    def list_path(self):
+        list_path = None
+        if "list" in self.resource.operations:
+            list_path = self.resource.operations["list"][1]
+
+        return list_path
+
     def write_module(self, target_dir, content):
         module_dir = target_dir / "plugins" / "modules"
         module_dir.mkdir(parents=True, exist_ok=True)
         module_py_file = module_dir / "{name}.py".format(name=self.name)
         module_py_file.write_text(content)
+
+    def renderer(self, target_dir):
+        arguments = gen_arguments_py(self.parameters(), self.list_index())
+        documentation = format_documentation(
+            gen_documentation(self.name, self.description(), self.parameters())
+        )
+        required_if = gen_required_if(self.parameters())
+
+        content = jinja2_renderer(
+            self.template_file,
+            arguments=_indent(arguments, 4),
+            documentation=documentation,
+            list_index=self.list_index(),
+            list_path=self.list_path(),
+            name=self.name,
+            operations=self.resource.operations,
+            path=self.get_path(),
+            payload_format=self.payload(),
+            required_if=required_if,
+        )
+
+        self.write_module(target_dir, content)
 
 
 def gen_required_if(parameters):
@@ -733,33 +762,14 @@ def gen_required_if(parameters):
 
 
 class AnsibleModule(AnsibleModuleBase):
+    template_file = "default_module.j2"
+
     def __init__(self, resource, definitions):
         super().__init__(resource, definitions)
         # TODO: We can probably do better
         self.default_operationIds = set(list(self.resource.operations.keys())) - set(
             ["get", "list"]
         )
-
-    def renderer(self, target_dir):
-        arguments = gen_arguments_py(self.parameters(), self.list_index())
-        documentation = format_documentation(
-            gen_documentation(self.name, self.description(), self.parameters())
-        )
-        required_if = gen_required_if(self.parameters())
-
-        content = jinja2_renderer(
-            "default_module.j2",
-            name=self.name,
-            documentation=documentation,
-            arguments=_indent(arguments, 4),
-            payload_format=self.payload(),
-            path=self.get_path(),
-            operations=self.resource.operations,
-            list_index=self.list_index(),
-            required_if=required_if,
-        )
-
-        self.write_module(target_dir, content)
 
 
 class AnsibleInfoModule(AnsibleModuleBase):
@@ -771,58 +781,13 @@ class AnsibleInfoModule(AnsibleModuleBase):
     def parameters(self):
         return [i for i in list(super().parameters()) if i["name"] != "state"]
 
-    def list_path(self):
-        list_path = None
-        if "list" in self.resource.operations:
-            list_path = self.resource.operations["list"][1]
-
-        return list_path
-
 
 class AnsibleInfoNoListModule(AnsibleInfoModule):
-    def renderer(self, target_dir):
-        arguments = gen_arguments_py(self.parameters(), self.list_index())
-        documentation = format_documentation(
-            gen_documentation(self.name, self.description(), self.parameters())
-        )
-        required_if = gen_required_if(self.parameters())
-
-        content = jinja2_renderer(
-            "info_no_list_module.j2",
-            name=self.name,
-            documentation=documentation,
-            path=self.get_path(),
-            arguments=_indent(arguments, 4),
-            payload_format=self.payload(),
-            list_index=self.list_index(),
-            list_path=self.list_path(),
-            required_if=required_if,
-        )
-
-        self.write_module(target_dir, content)
+    template_file = "info_no_list_module.j2"
 
 
 class AnsibleInfoListOnlyModule(AnsibleInfoModule):
-    def renderer(self, target_dir):
-        arguments = gen_arguments_py(self.parameters(), self.list_index())
-        documentation = format_documentation(
-            gen_documentation(self.name, self.description(), self.parameters())
-        )
-        required_if = gen_required_if(self.parameters())
-
-        content = jinja2_renderer(
-            "info_list_and_get_module.j2",
-            name=self.name,
-            documentation=documentation,
-            path=self.get_path(),
-            arguments=_indent(arguments, 4),
-            payload_format=self.payload(),
-            list_index=self.list_index(),
-            list_path=self.list_path(),
-            required_if=required_if,
-        )
-
-        self.write_module(target_dir, content)
+    template_file = "info_list_and_get_module.j2"
 
 
 class Definitions:
