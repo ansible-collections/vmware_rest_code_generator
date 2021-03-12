@@ -855,8 +855,7 @@ class SwaggerFile:
             if path.is_tech_preview():
                 print(f"Skipping {path.path} (Technology Preview)")
                 continue
-            if path not in paths:
-                result[path.path] = path
+            result[path.path] = path
             for verb, desc in path.value.items():
                 operationId = desc["operationId"]
                 if path.path.startswith("/rest/vcenter/vm/{vm}/tools"):
