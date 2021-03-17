@@ -515,6 +515,21 @@ class AnsibleModuleBase:
 
         return fields
 
+    def ansible_state(self, operationId):
+        mapping = {
+            "update": "present",
+            "delete": "absent",
+            "create": "present",
+        }
+        # in this case, we don't want to see 'create' in the
+        # "Required with" list
+        if operationId == "update" and "create" not in self.default_operationIds:
+            return
+        if operationId in mapping:
+            return mapping[operationId]
+        else:
+            return operationId
+
     def parameters(self):
         def sort_operationsid(input):
             output = sorted(input)
@@ -523,25 +538,6 @@ class AnsibleModuleBase:
             return output
 
         results = {}
-
-        def ansible_state(operationids):
-            mapping = {
-                "update": "present",
-                "delete": "absent",
-                "create": "present",
-            }
-            final = []
-            for o in operationids:
-                # in this case, we don't want to see 'create' in the
-                # "Required with" list
-                if o == "update" and "create" not in operationids:
-                    continue
-                if o in mapping:
-                    final.append(mapping[o])
-                else:
-                    final.append(o)
-            return sorted(set(final))
-
         for operationId in sort_operationsid(self.default_operationIds):
             if operationId not in self.resource.operations:
                 continue
@@ -553,6 +549,7 @@ class AnsibleModuleBase:
                 if name not in results:
                     results[name] = parameter
                     results[name]["operationIds"] = []
+                    results[name]["_required_with_operations"] = []
 
                 # Merging two parameters, for instance "action" in
                 # /rest/vcenter/vm-template/library-items/{template_library_item}/check-outs
@@ -574,6 +571,8 @@ class AnsibleModuleBase:
 
                 results[name]["operationIds"].append(operationId)
                 results[name]["operationIds"].sort()
+                if parameter.get("required"):
+                    results[name]["_required_with_operations"].append(operationId)
 
         answer_fields = self.answer()
         # Note: If the final result comes with a "label" field, we expose a "label"
@@ -589,11 +588,14 @@ class AnsibleModuleBase:
                     len(set(self.default_operationIds) - set(result["operationIds"]))
                     > 0
                 ):
+
+                    required_with = []
+                    for i in result["operationIds"]:
+                        state = self.ansible_state(i)
+                        if state:
+                            required_with.append(state)
                     result["description"] += " Required with I(state={})".format(
-                        ansible_state(result["operationIds"])
-                    )
-                    result["_required_with_states"] = ansible_state(
-                        result["operationIds"]
+                        sorted(set(required_with))
                     )
                     del result["required"]
                 else:
@@ -625,6 +627,17 @@ class AnsibleModuleBase:
             del results["state"]
 
         return sorted(results.values(), key=lambda item: item["name"])
+
+    def gen_required_if(self, parameters):
+        by_states = DefaultDict(list)
+        for parameter in parameters:
+            for operation in parameter.get("_required_with_operations", []):
+                by_states[self.ansible_state(operation)].append(parameter["name"])
+        entries = []
+        for operation, fields in by_states.items():
+            state = self.ansible_state(operation)
+            entries.append(["state", state, sorted(set(fields)), True])
+        return entries
 
     @staticmethod
     def _property_to_parameter(prop_struct, definitions):
@@ -732,7 +745,7 @@ class AnsibleModuleBase:
         documentation = format_documentation(
             gen_documentation(self.name, self.description(), self.parameters())
         )
-        required_if = gen_required_if(self.parameters())
+        required_if = self.gen_required_if(self.parameters())
 
         content = jinja2_renderer(
             self.template_file,
@@ -748,17 +761,6 @@ class AnsibleModuleBase:
         )
 
         self.write_module(target_dir, content)
-
-
-def gen_required_if(parameters):
-    by_state = DefaultDict(list)
-    for parameter in parameters:
-        for state in parameter.get("_required_with_states", []):
-            by_state[state].append(parameter["name"])
-    entries = []
-    for state, fields in by_state.items():
-        entries.append(["state", state, fields, True])
-    return entries
 
 
 class AnsibleModule(AnsibleModuleBase):

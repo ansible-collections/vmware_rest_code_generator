@@ -613,6 +613,7 @@ def test_AnsibleInfoModule_parameters():
     assert module.parameters() == [
         {
             "_loc_in_payload": "filter.vms",
+            "_required_with_operations": [],
             "description": "desc of multi",
             "elements": "string",
             "in": "query",
@@ -623,7 +624,7 @@ def test_AnsibleInfoModule_parameters():
         },
         {
             "_loc_in_payload": "vm",
-            "_required_with_states": ["get"],
+            "_required_with_operations": ["get"],
             "description": "Id of the VM Required with I(state=['get'])",
             "in": "path",
             "name": "vm",
@@ -655,6 +656,7 @@ def test_AnsibleModule_parameters_complex():
     assert module.parameters() == [
         {
             "_loc_in_payload": "action",
+            "_required_with_operations": ["check_in", "check_out"],
             "description": "action=check-out This parameter is mandatory.",
             "enum": ["check-in", "check-out"],
             "in": "query",
@@ -665,7 +667,7 @@ def test_AnsibleModule_parameters_complex():
         },
         {
             "_loc_in_payload": "spec/message",
-            "_required_with_states": ["check_in"],
+            "_required_with_operations": ["check_in"],
             "description": "Message describing the changes made to the virtual machine. "
             "Required with I(state=['check_in'])",
             "in": None,
@@ -675,6 +677,7 @@ def test_AnsibleModule_parameters_complex():
         },
         {
             "_loc_in_payload": "spec/name",
+            "_required_with_operations": [],
             "description": "Name of the virtual machine to check out of the library "
             "item.",
             "in": None,
@@ -685,6 +688,7 @@ def test_AnsibleModule_parameters_complex():
         },
         {
             "_loc_in_payload": "spec/placement",
+            "_required_with_operations": [],
             "description": "Information used to place the checked out virtual machine.",
             "elements": "dict",
             "in": None,
@@ -735,6 +739,7 @@ def test_AnsibleModule_parameters_complex():
         },
         {
             "_loc_in_payload": "spec/powered_on",
+            "_required_with_operations": [],
             "description": "Specifies whether the virtual machine should be powered on "
             "after check out.",
             "in": None,
@@ -751,6 +756,7 @@ def test_AnsibleModule_parameters_complex():
         },
         {
             "_loc_in_payload": "template_library_item",
+            "_required_with_operations": ["check_in", "check_out"],
             "description": "Identifier of the content library item containing the source "
             "virtual machine template to be checked out. This parameter is mandatory.",
             "in": "path",
@@ -761,7 +767,7 @@ def test_AnsibleModule_parameters_complex():
         },
         {
             "_loc_in_payload": "vm",
-            "_required_with_states": ["check_in"],
+            "_required_with_operations": ["check_in"],
             "description": "Identifier of the virtual machine to check into the library "
             "item. Required with I(state=['check_in'])",
             "in": "path",
