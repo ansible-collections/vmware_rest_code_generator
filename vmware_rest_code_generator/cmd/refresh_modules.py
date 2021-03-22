@@ -353,7 +353,7 @@ def flatten_ref(tree, definitions):
         v = tree[k]
         if k == "$ref":
             dotted = v.split("/")[2]
-            if dotted == "vapi.std.localization_param":
+            if dotted in ["vapi.std.localization_param", "VapiStdLocalizationParam"]:
                 # to avoid an endless loop with
                 # vapi.std.nested_localizable_message
                 return {"go_to": "vapi.std.localization_param"}
@@ -362,8 +362,8 @@ def flatten_ref(tree, definitions):
             if "description" not in data and "description" in tree:
                 data["description"] = tree["description"]
             return data
-        elif isinstance(v, dict):
-            tree[k] = flatten_ref(v, definitions)
+        # elif isinstance(v, dict):
+        #    tree[k] = flatten_ref(v, definitions)
         else:
             # Note: should never happen,
             # corner case for appliance_infraprofile_configs_info
@@ -804,9 +804,6 @@ class Definitions:
         else:
             dotted = ref
 
-        if dotted == "appliance.networking_change_task":
-            dotted = "appliance.networking_change$task"
-
         try:
             definition = self.definitions[dotted]
         except KeyError:
@@ -859,6 +856,12 @@ class SwaggerFile:
                 result[path.path] = path
             for verb, desc in path.value.items():
                 operationId = desc["operationId"]
+                if desc.get("deprecated"):
+                    continue
+                try:
+                    parameters = desc["parameters"]
+                except KeyError:
+                    print(f"No parameters for {operationId} {path.path}")
                 if path.path.startswith("/rest/vcenter/vm/{vm}/tools"):
                     if operationId == "upgrade":
                         print(f"Skipping {path.path} upgrade (broken)")
@@ -867,10 +870,11 @@ class SwaggerFile:
                     if operationId == "validate$task":
                         print(f"Skipping {path.path} upgrade (broken)")
                         continue
+                print(f"{operationId} -> {path.path}")
                 path.operations[operationId] = (
                     verb,
                     path.path,
-                    desc["parameters"],
+                    parameters,
                     desc["responses"],
                 )
         return result
@@ -923,14 +927,14 @@ def main():
     for json_file in ["vcenter.json", "content.json"]:
         print("Generating modules from {}".format(json_file))
         raw_content = pkg_resources.resource_string(
-            "vmware_rest_code_generator", f"api_specifications/7.0.0/{json_file}"
+            "vmware_rest_code_generator", f"api_specifications/7.0.2/{json_file}"
         )
         swagger_file = SwaggerFile(raw_content)
         resources = swagger_file.init_resources(swagger_file.paths.values())
 
         for resource in resources.values():
-            # if resource.name != "vcenter_vm":
-            #     continue
+            if resource.name != "appliance_access_consolecli":
+                continue
             if resource.name == "appliance_logging_forwarding":
                 continue
             if resource.name.startswith("vcenter_trustedinfrastructure"):
