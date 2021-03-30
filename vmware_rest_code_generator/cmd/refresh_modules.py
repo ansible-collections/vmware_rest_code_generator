@@ -98,6 +98,8 @@ class Description:
             "vcenter.vm.hardware.ScsiAdapter": "vcenter_vm_hardware_adapter_scsi",
             "vcenter.vm.hardware.SerialPort": "vcenter_vm_hardware_serial",
             "VirtualMachine": "vcenter_vm_info",
+            "infraprofile.profile": "appliance_infraprofile_configs",
+            "appliance.vmon.Service": "appliance_vmon_service",
         }
 
         if not m:
@@ -290,6 +292,8 @@ def path_to_name(path):
         elements = elements[1:]
     elif elements[0:2] == ["rest", "vcenter"]:
         elements = elements[1:]
+    elif elements[0:2] == ["rest", "api"]:
+        elements = elements[2:]
     elif elements[:1] == ["api"]:
         elements = elements[1:]
 
@@ -459,6 +463,7 @@ class AnsibleModuleBase:
             "^content_locallibrary_info$",
             "^content_subscribedlibrary$",
             "^content_subscribedlibrary_info$",
+            "^appliance.*$",
         ]
         if self.name in [
             "vcenter_vm_guest_customization",
@@ -468,6 +473,7 @@ class AnsibleModuleBase:
             "vcenter_vm_tools_installer",  # does not work
             "vcenter_vm_tools_installer_info",
             "vcenter_vm_storage_policy_compliance",  # does not work, returns 404
+            "appliance_networking_dns_hostname",  # Fails with: Host name is used as a network identity, the set operation is not allowed.
         ]:
             return False
 
@@ -821,7 +827,9 @@ class Definitions:
 class Path:
     def __init__(self, path, value):
         super().__init__()
-        if not path.startswith("/rest"):
+        if path.startswith("/api/appliance"):
+            self.path = path
+        elif not path.startswith("/rest"):
             self.path = "/rest" + path
         else:
             self.path = path
@@ -920,7 +928,7 @@ def main():
     args = parser.parse_args()
 
     module_list = []
-    for json_file in ["vcenter.json", "content.json"]:
+    for json_file in ["vcenter.json", "content.json", "appliance.json"]:
         print("Generating modules from {}".format(json_file))
         raw_content = pkg_resources.resource_string(
             "vmware_rest_code_generator", f"api_specifications/7.0.0/{json_file}"
