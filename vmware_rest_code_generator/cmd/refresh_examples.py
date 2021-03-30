@@ -10,8 +10,8 @@ import yaml
 
 def _task_to_string(task):
     a = io.StringIO()
-    yaml = ruamel.yaml.YAML()
-    yaml.dump([task], a)
+    _yaml = ruamel.yaml.YAML()
+    _yaml.dump([task], a)
     a.seek(0)
     return a.read().rstrip()
 
@@ -21,9 +21,10 @@ def get_tasks(target_dir, *scenarios):
     for scenario in scenarios:
         task_dir = target_dir / "tests" / "integration" / "targets" / scenario / "tasks"
         for _file in task_dir.glob("*"):
-            yaml = ruamel.yaml.YAML()
-            yaml.indent(sequence=4, offset=2)
-            tasks += yaml.load(_file.open())
+            print(_file)
+            _yaml = ruamel.yaml.YAML()
+            _yaml.indent(sequence=4, offset=2)
+            tasks += _yaml.load(_file.open())
     return tasks
 
 
