@@ -1011,7 +1011,9 @@ def main():
         ).format(git_revision=git_revision())
     )
 
-    vmware_rest_dest = args.target_dir / "plugins" / "module_utils" / "vmware_rest.py"
+    module_utils_dir = args.target_dir / "plugins" / "module_utils"
+    module_utils_dir.mkdir(exist_ok=True)
+    vmware_rest_dest = module_utils_dir / "vmware_rest.py"
     vmware_rest_dest.write_bytes(
         pkg_resources.resource_string(
             "vmware_rest_code_generator", "module_utils/vmware_rest.py"
