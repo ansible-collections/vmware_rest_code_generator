@@ -142,7 +142,6 @@ async def _update(params, session):
 
 
 {% elif operation == "set" -%}
-import q
 async def _set(params, session):
     _in_query_parameters = PAYLOAD_FORMAT["{{ operation }}"]["query"].keys()
     payload = prepare_payload(params, PAYLOAD_FORMAT["{{ operation }}"])
