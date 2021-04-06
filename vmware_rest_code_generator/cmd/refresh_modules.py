@@ -434,7 +434,6 @@ class AnsibleModuleBase:
             "^content_locallibrary_info$",
             "^content_subscribedlibrary$",
             "^content_subscribedlibrary_info$",
-            "^appliance.*$",
             "^vcenter_vm_storage_policy_compliance_info$",
         ]
         regexes = [re.compile(i) for i in trusted_module_allowlist]
