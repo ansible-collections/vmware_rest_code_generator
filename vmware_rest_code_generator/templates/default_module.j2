@@ -86,7 +86,9 @@ async def _create(params, session):
                 _id = list(_json["value"].values())[0]
             elif isinstance(_json, dict) and "value" in _json:
                 _id = _json["value"]
-            _json = await get_device_info(session, _url, _id)
+            _json_device_info = await get_device_info(session, _url, _id)
+            if _json_device_info:
+               _json = _json_device_info
 
         return await update_changed_flag(_json, resp.status, "create")
 
