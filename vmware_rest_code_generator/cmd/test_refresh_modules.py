@@ -570,38 +570,24 @@ def test_filter_out_trusted_module():
 
 # AnsibleInfoModule
 # AnsibleInfoModule
-def test_AnsibleInfoModule_payload():
+def test_payload():
     paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
     resources = rm.SwaggerFile.init_resources(paths.values())
     definitions = rm.Definitions(my_definitions)
+    module = rm.AnsibleModule(resources["vcenter_vm"], definitions)
+    assert module.payload() == {}
     module = rm.AnsibleInfoModule(resources["vcenter_vm"], definitions)
     assert module.payload() == {
         "get": {"body": {}, "path": {"vm": "vm"}, "query": {}},
         "list": {"body": {}, "path": {}, "query": {"filter.vms": "filter.vms"}},
     }
-
     paths = rm.SwaggerFile.load_paths(my_raw_paths_data_with_param_in_path)
     resources = rm.SwaggerFile.init_resources(paths.values())
     definitions = rm.Definitions(my_definitions)
     module = rm.AnsibleInfoModule(
         resources["vcenter_vmtemplate_libraryitems_checkouts"], definitions
     )
-    assert module.payload() == {
-        "check_in": {
-            "body": {"message": "spec/message"},
-            "path": {"template_library_item": "template_library_item", "vm": "vm"},
-            "query": {"action": "action"},
-        },
-        "check_out": {
-            "body": {
-                "name": "spec/name",
-                "placement": "spec/placement",
-                "powered_on": "spec/powered_on",
-            },
-            "path": {"template_library_item": "template_library_item"},
-            "query": {"action": "action"},
-        },
-    }
+    assert module.payload() == {}
 
 
 def test_AnsibleInfoModule_parameters():

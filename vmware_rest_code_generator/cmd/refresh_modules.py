@@ -473,7 +473,10 @@ class AnsibleModuleBase:
     def payload(self):
         """"Return a structure that describe the format of the data to send back."""
         payload = {}
-        for operationId in self.resource.operations:
+        # for operationId in self.resource.operations:
+        for operationId in self.default_operationIds:
+            if operationId not in self.resource.operations:
+                continue
             payload[operationId] = {"query": {}, "body": {}, "path": {}}
             payload_info = {}
             for parameter in AnsibleModule._property_to_parameter(
