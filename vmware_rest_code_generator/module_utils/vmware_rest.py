@@ -122,7 +122,7 @@ def gen_args(params, in_query_parameter):
 
 async def update_changed_flag(data, status, operation):
     if data is None:
-        data = {}
+        data = {"value": {}}
     elif isinstance(data, list):  # e.g: appliance_infraprofile_configs_info
         data = {"value": data}
     elif isinstance(data, str) and data[0] in [
@@ -133,6 +133,8 @@ async def update_changed_flag(data, status, operation):
     elif isinstance(data, str):
         data = {"value": data}
     elif isinstance(data, dict) and "value" not in data:  # 7.0.2+
+        data = {"value": data}
+    elif isinstance(data, bool):
         data = {"value": data}
 
     if status == 500:
@@ -153,6 +155,15 @@ async def update_changed_flag(data, status, operation):
     elif operation == "delete" and status in [200, 204]:
         data["failed"] = False
         data["changed"] = True
+    elif operation in ["get", "list"] and status in [200]:
+        data["failed"] = False
+        data["changed"] = False
+    elif status == 400:
+        data["failed"] = True
+        data["changed"] = False
+
+    if not isinstance(data["value"], dict):
+        pass
     elif data.get("type") == "com.vmware.vapi.std.errors.not_found":
         if operation == "delete":
             data["failed"] = False
@@ -160,9 +171,6 @@ async def update_changed_flag(data, status, operation):
         else:
             data["failed"] = True
             data["changed"] = False
-    elif operation in ["get", "list"] and status in [200]:
-        data["failed"] = False
-        data["changed"] = False
     elif data.get("type") == "com.vmware.vapi.std.errors.already_in_desired_state":
         data["failed"] = False
         data["changed"] = False
@@ -190,9 +198,6 @@ async def update_changed_flag(data, status, operation):
         data["changed"] = False
     elif data.get("type", "").startswith("com.vmware.vapi.std.errors"):
         data["failed"] = True
-    elif status == 400:
-        data["failed"] = True
-        data["changed"] = False
 
     data["_debug_info"] = {"status": status, "operation": operation}
     return data
