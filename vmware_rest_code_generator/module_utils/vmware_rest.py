@@ -158,6 +158,9 @@ async def update_changed_flag(data, status, operation):
     elif operation in ["get", "list"] and status in [200]:
         data["failed"] = False
         data["changed"] = False
+    elif operation in ["get", "list"] and status in [404]:
+        data["failed"] = True
+        data["changed"] = False
     elif status == 400:
         data["failed"] = True
         data["changed"] = False
