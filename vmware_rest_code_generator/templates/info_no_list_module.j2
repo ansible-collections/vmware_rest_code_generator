@@ -14,11 +14,10 @@ async def entry_point(module, session):
 async def _info(params, session):
     payload_format = list(PAYLOAD_FORMAT.values())[0]
     _in_query_parameters = payload_format["query"].keys()
-    payload = prepare_payload(params, payload_format)
     _url = (
         "https://{vcenter_hostname}"
         "{{path}}").format(**params) + gen_args(params, _in_query_parameters)
-    async with session.get(_url, json=payload) as resp:
+    async with session.get(_url) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()

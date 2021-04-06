@@ -27,20 +27,20 @@ async def entry_point(module, session):
 
 {% for operation in operations|sort -%}
 {% set verb = operations[operation][0] %}
-{% set path = operations[operation][1] %}
+{% set _path = operations[operation][1] %}
 
 {% if operation == "delete" -%}
 async def _delete(params, session):
     _in_query_parameters = PAYLOAD_FORMAT["delete"]["query"].keys()
     payload = prepare_payload(params, PAYLOAD_FORMAT["delete"])
-    subdevice_type = get_subdevice_type("{{ path }}")
+    subdevice_type = get_subdevice_type("{{ _path }}")
     if subdevice_type and not params[subdevice_type]:
         _json = (await exists(params, session, build_url(params)))
         if _json:
             params[subdevice_type] = _json['id']
     _url = (
         "https://{vcenter_hostname}"
-        "{{path}}").format(**params) + gen_args(params, _in_query_parameters)
+        "{{_path}}").format(**params) + gen_args(params, _in_query_parameters)
     async with session.{{ verb }}(_url, json=payload) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
@@ -58,6 +58,8 @@ async def _create(params, session):
     else:
         _json = await exists(params, session, build_url(params), ["{{list_index}}"])
     if _json:
+        if "value" not in _json:  # 7.0.2+
+            _json = {"value": _json}
         if "_update" in globals():
             params["{{list_index}}"] = _json["id"]
             return (await globals()["_update"](params, session))
@@ -66,7 +68,7 @@ async def _create(params, session):
     payload = prepare_payload(params, PAYLOAD_FORMAT["create"])
     _url = (
         "https://{vcenter_hostname}"
-        "{{ path }}").format(**params)
+        "{{ _path }}").format(**params)
     async with session.{{ verb }}(_url, json=payload) as resp:
         if resp.status == 500:
             text = await resp.text()
@@ -76,11 +78,13 @@ async def _create(params, session):
                 _json = await resp.json()
         except KeyError:
             _json = {}
-        # Update the value field with all the details
-        if (resp.status in [200, 201]) and "value" in _json:
-            if isinstance(_json["value"], dict):
+
+        if (resp.status in [200, 201]):
+            if isinstance(_json, str): # 7.0.2 and greater
+                _id = _json  # TODO: fetch the object
+            elif isinstance(_json, dict) and "value" not in _json:
                 _id = list(_json["value"].values())[0]
-            else:
+            elif isinstance(_json, dict) and "value" in _json:
                 _id = _json["value"]
             _json = await get_device_info(session, _url, _id)
 
@@ -92,10 +96,14 @@ async def _update(params, session):
     payload = prepare_payload(params, PAYLOAD_FORMAT["update"])
     _url = (
         "https://{vcenter_hostname}"
-        "{{ path }}").format(**params)
+        "{{ _path }}").format(**params)
     async with session.get(_url) as resp:
         _json = await resp.json()
-        for k, v in _json["value"].items():
+        if "value" in _json:
+            value = _json["value"]
+        else:  # 7.0.2 and greater
+            value = _json
+        for k, v in value.items():
             if k in payload and payload[k] == v:
                 del payload[k]
             elif "spec" in payload:
@@ -115,6 +123,8 @@ async def _update(params, session):
 
         if payload == {} or payload == {"spec": {}}:
             # Nothing has changed
+            if "value" not in _json:  # 7.0.2
+               _json = {"value": _json}
             _json["id"] = params.get("{{list_index}}")
             return await update_changed_flag(_json, resp.status, "get")
     async with session.{{ verb }}(_url, json=payload) as resp:
@@ -123,21 +133,59 @@ async def _update(params, session):
                 _json = await resp.json()
         except KeyError:
             _json = {}
+        if "value" not in _json:  # 7.0.2
+           _json = {"value": _json}
         _json["id"] = params.get("{{list_index}}")
         return await update_changed_flag(_json, resp.status, "update")
-{% elif operation not in ["get", "list"] %}
 
-async def _{{ operation }}(params, session):
+
+{% elif operation == "set" -%}
+import q
+async def _set(params, session):
     _in_query_parameters = PAYLOAD_FORMAT["{{ operation }}"]["query"].keys()
     payload = prepare_payload(params, PAYLOAD_FORMAT["{{ operation }}"])
-    subdevice_type = get_subdevice_type("{{ path }}")
+    subdevice_type = get_subdevice_type("{{ _path }}")
     if subdevice_type and not params[subdevice_type]:
         _json = (await exists(params, session, build_url(params)))
         if _json:
             params[subdevice_type] = _json['id']
     _url = (
         "https://{vcenter_hostname}"
-        "{{ path }}").format(**params) + gen_args(params, _in_query_parameters)
+        # aa
+        "{{ _path }}").format(**params) + gen_args(params, _in_query_parameters)
+    async with session.get(_url, json=payload) as resp:
+          before = await resp.json()
+
+    async with session.put(_url, json=payload) as resp:
+        try:
+            if resp.headers["Content-Type"] == "application/json":
+                _json = await resp.json()
+        except KeyError:
+            _json = {}
+
+        # The PUT answer does not let us know if the resource has actually been
+        # modified
+        async with session.get(_url, json=payload) as resp_get:
+            after = await resp_get.json()
+            if before == after:
+                return await update_changed_flag(after, resp_get.status, "get")
+        return await update_changed_flag(_json, resp.status, "set")
+
+
+{% elif operation not in ["get", "list"] %}
+
+async def _{{ operation }}(params, session):
+    _in_query_parameters = PAYLOAD_FORMAT["{{ operation }}"]["query"].keys()
+    payload = prepare_payload(params, PAYLOAD_FORMAT["{{ operation }}"])
+    subdevice_type = get_subdevice_type("{{ _path }}")
+    if subdevice_type and not params[subdevice_type]:
+        _json = (await exists(params, session, build_url(params)))
+        if _json:
+            params[subdevice_type] = _json['id']
+    _url = (
+        "https://{vcenter_hostname}"
+        # aa
+        "{{ _path }}").format(**params) + gen_args(params, _in_query_parameters)
     async with session.{{ verb }}(_url, json=payload) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":

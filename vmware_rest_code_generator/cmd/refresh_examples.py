@@ -21,7 +21,6 @@ def get_tasks(target_dir, *scenarios):
     for scenario in scenarios:
         task_dir = target_dir / "tests" / "integration" / "targets" / scenario / "tasks"
         for _file in task_dir.glob("*"):
-            print(_file)
             _yaml = ruamel.yaml.YAML()
             _yaml.indent(sequence=4, offset=2)
             tasks += _yaml.load(_file.open())
@@ -128,7 +127,7 @@ def inject(target_dir, extracted_examples):
         new_content = ""
         in_examples_block = False
         for l in module_path.read_text().split("\n"):
-            if l == 'EXAMPLES = """':
+            if l == 'EXAMPLES = r"""':
                 in_examples_block = True
                 new_content += l + "\n" + examples_section_to_inject
             elif in_examples_block and l == '"""':
@@ -157,8 +156,11 @@ def main():
     galaxy_file = args.target_dir / "galaxy.yml"
     galaxy = yaml.load(galaxy_file.open())
     collection_name = f"{galaxy['namespace']}.{galaxy['name']}"
-    tasks = get_tasks(args.target_dir, "vcenter_vm_scenario1", "prepare_lab")
+    tasks = get_tasks(
+        args.target_dir, "vcenter_vm_scenario1", "prepare_lab", "appliance"
+    )
     extracted_examples = extract(tasks, collection_name)
+    print(extracted_examples)
     inject(args.target_dir, extracted_examples)
 
 

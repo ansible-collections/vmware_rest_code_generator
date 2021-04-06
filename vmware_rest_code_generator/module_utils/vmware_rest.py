@@ -100,7 +100,7 @@ open_session._pool = {}
 def gen_args(params, in_query_parameter):
     args = ""
     for i in in_query_parameter:
-        if i.startswith("filter."):
+        if i.startswith("filter."):  # < 7.0.2
             v = params.get("filter_" + i[7:])
         else:
             v = params.get(i)
@@ -121,7 +121,7 @@ def gen_args(params, in_query_parameter):
 
 
 async def update_changed_flag(data, status, operation):
-    if not data:
+    if data is None:
         data = {}
     elif isinstance(data, list):  # e.g: appliance_infraprofile_configs_info
         data = {"value": data}
@@ -130,16 +130,24 @@ async def update_changed_flag(data, status, operation):
         "]",
     ]:  # e.g: appliance_infraprofile_configs
         data = {"value": json.loads(data)}
-    if operation == "create" and status in [200, 201]:
+    elif isinstance(data, str):
+        data = {"value": data}
+    elif isinstance(data, dict) and "value" not in data:  # 7.0.2+
+        data = {"value": data}
+
+    if status == 500:
+        data["failed"] = True
+        data["changed"] = False
+    elif operation == "create" and status in [200, 201]:
         data["failed"] = False
         data["changed"] = True
-    elif operation == "update" and status in [200]:
+    elif operation == "update" and status in [200, 204]:
         data["failed"] = False
         data["changed"] = True
     elif operation == "upgrade" and status in [200]:
         data["failed"] = False
         data["changed"] = True
-    elif operation == "set" and status in [200]:
+    elif operation == "set" and status in [200, 204]:
         data["failed"] = False
         data["changed"] = True
     elif operation == "delete" and status in [200, 204]:
@@ -161,6 +169,9 @@ async def update_changed_flag(data, status, operation):
     elif data.get("type") == "com.vmware.vapi.std.errors.already_exists":
         data["failed"] = False
         data["changed"] = False
+    elif data.get("value", {}).get("error_type") == "ALREADY_EXISTS":
+        data["failed"] = False
+        data["changed"] = False
     elif data.get("type") == "com.vmware.vapi.std.errors.resource_in_use":
         # NOTE: this is a shortcut/hack. We get this issue if a CDROM already exists
         data["failed"] = False
@@ -179,6 +190,9 @@ async def update_changed_flag(data, status, operation):
         data["changed"] = False
     elif data.get("type", "").startswith("com.vmware.vapi.std.errors"):
         data["failed"] = True
+    elif status == 400:
+        data["failed"] = True
+        data["changed"] = False
 
     data["_debug_info"] = {"status": status, "operation": operation}
     return data
@@ -196,7 +210,12 @@ async def build_full_device_list(session, url, device_list):
     import asyncio
 
     device_ids = []
-    for i in device_list["value"]:
+
+    if isinstance(device_list, list):
+        value = device_list
+    else:  # 7.0.2 <
+        value = device_list["value"]
+    for i in value:
         # Content library returns string {"value": "library_id"}
         if isinstance(i, str):
             return device_list
@@ -217,6 +236,8 @@ async def get_device_info(session, url, _id):
     async with session.get(url + "/" + _id) as resp:
         if resp.status == 200:
             _json = await resp.json()
+            if "value" not in _json:  # 7.0.2+
+                _json = {"value": _json}
             _json["id"] = str(_id)
             return _json
 
@@ -234,7 +255,16 @@ async def exists(params, session, url, unicity_keys=None):
         for k in unicity_keys:
             if not params.get(k):
                 continue
-            v = device["value"].get(k)
+            if isinstance(device, dict):  # 7.0.2 <
+                v = device["value"].get(k)
+            elif isinstance(device, list):
+                v = device
+            else:
+                exceptions = importlib.import_module(
+                    "ansible_collections.cloud.common.plugins.module_utils.turbo.exceptions"
+                )
+                raise exceptions.EmbeddedModuleFailure(msg="Unexpect type")
+
             if isinstance(k, int) or isinstance(v, str):
                 k = str(k)
                 v = str(v)

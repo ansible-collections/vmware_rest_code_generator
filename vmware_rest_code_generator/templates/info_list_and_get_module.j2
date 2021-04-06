@@ -20,6 +20,9 @@ async def entry_point(module, session):
     async with session.get(url) as resp:
         _json = await resp.json()
 
+        if "value" not in _json:  # 7.0.2+
+           _json = {"value": _json}
+
         {% if list_index %}
         if module.params.get('{{list_index}}'):
             _json["id"] = module.params.get('{{list_index}}')
