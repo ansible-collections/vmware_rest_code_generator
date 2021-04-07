@@ -11,6 +11,8 @@ mkdir -p logs
     mkdir -p manual/source/vmware_rest_scenarios/task_outputs
     cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/vcenter_vm_scenario1
     ./refresh_RETURN_block.sh
+     cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/appliance
+    ./refresh_RETURN_block.sh
 )
 (
     cd ~/.ansible/collections/ansible_collections/goneri/utils

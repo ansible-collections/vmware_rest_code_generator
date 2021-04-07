@@ -152,7 +152,6 @@ async def _set(params, session):
             params[subdevice_type] = _json['id']
     _url = (
         "https://{vcenter_hostname}"
-        # aa
         "{{ _path }}").format(**params) + gen_args(params, _in_query_parameters)
     async with session.get(_url, json=payload) as resp:
           before = await resp.json()
@@ -163,7 +162,8 @@ async def _set(params, session):
                 _json = await resp.json()
         except KeyError:
             _json = {}
-
+        if "value" not in _json:  # 7.0.2
+           _json = {"value": _json}
         # The PUT answer does not let us know if the resource has actually been
         # modified
         async with session.get(_url, json=payload) as resp_get:
@@ -193,6 +193,8 @@ async def _{{ operation }}(params, session):
                 _json = await resp.json()
         except KeyError:
             _json = {}
+        if "value" not in _json:  # 7.0.2
+           _json = {"value": _json}
         return await update_changed_flag(_json, resp.status, "{{ operation }}")
 {% endif %}
 
