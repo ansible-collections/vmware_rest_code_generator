@@ -408,7 +408,7 @@ class AnsibleModuleBase:
     def description(self):
         for operationId in self.default_operationIds:
             if operationId in self.resource.summary:
-                return self.resource.summary[operationId]
+                self.resource.summary[operationId].split("\n")[0]
 
         print(f"generic description: {self.name}")
         return f"Handle resource of type {self.name}"
