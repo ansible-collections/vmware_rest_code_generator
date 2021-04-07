@@ -988,6 +988,7 @@ def main():
     ignore_content += (
         "plugins/module_utils/vmware_rest.py future-import-boilerplate!skip\n"
         "plugins/modules/vcenter_vm_guest_customization.py pep8!skip\n"  # E501: line too long (189 > 160 characters)
+        "plugins/modules/appliance_infraprofile_configs.py pep8!skip\n"  # E501: line too long (302 > 160 characters)
     )
     files = ["plugins/modules/{}.py".format(module) for module in module_list]
     for f in files:
