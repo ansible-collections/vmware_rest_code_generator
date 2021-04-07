@@ -983,6 +983,8 @@ def main():
     ignore_content = "plugins/module_utils/vmware_rest.py compile-2.6!skip\n"
     ignore_content += "plugins/module_utils/vmware_rest.py compile-2.7!skip\n"
     ignore_content += "plugins/module_utils/vmware_rest.py compile-3.5!skip\n"
+    ignore_content += "plugins/module_utils/vmware_rest.py import-2.6!skip\n"
+    ignore_content += "plugins/module_utils/vmware_rest.py import-2.7!skip\n"
     ignore_content += "plugins/module_utils/vmware_rest.py import-3.5!skip\n"
     ignore_content += "plugins/module_utils/vmware_rest.py metaclass-boilerplate!skip\n"
     ignore_content += (
@@ -995,6 +997,8 @@ def main():
             "compile-2.6!skip",  # Py3.6+
             "compile-2.7!skip",  # Py3.6+
             "compile-3.5!skip",  # Py3.6+
+            "import-2.6!skip",  # Py3.6+
+            "import-2.7!skip",  # Py3.6+
             "import-3.5!skip",  # Py3.6+
             "future-import-boilerplate!skip",  # Py2 only
             "metaclass-boilerplate!skip",  # Py2 only
