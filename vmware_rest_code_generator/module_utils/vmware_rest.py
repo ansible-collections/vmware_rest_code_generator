@@ -125,17 +125,18 @@ async def update_changed_flag(data, status, operation):
         data = {"value": {}}
     elif isinstance(data, list):  # e.g: appliance_infraprofile_configs_info
         data = {"value": data}
-    elif isinstance(data, str) and data[0] in [
-        "{",
-        "]",
-    ]:  # e.g: appliance_infraprofile_configs
-        data = {"value": json.loads(data)}
     elif isinstance(data, str):
         data = {"value": data}
     elif isinstance(data, dict) and "value" not in data:  # 7.0.2+
         data = {"value": data}
     elif isinstance(data, bool):
         data = {"value": data}
+
+    if isinstance(data["value"], str) and data["value"][0] in [
+        "{",
+        "]",
+    ]:  # e.g: appliance_infraprofile_configs
+        data["value"] == json.loads(data["value"])
 
     if status == 500:
         data["failed"] = True
