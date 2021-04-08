@@ -137,7 +137,7 @@ def python_type(value):
 def gen_documentation(name, description, parameters):
 
     documentation = {
-        "author": ["Goneri Le Bouder (@goneri) <goneri@lebouder.net>"],
+        "author": ["Ansible Cloud Team (@ansible-collections)"],
         "description": description,
         "module": name,
         "notes": ["Tested on vSphere 7.0"],
