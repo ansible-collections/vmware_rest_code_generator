@@ -160,7 +160,6 @@ def main():
         args.target_dir, "vcenter_vm_scenario1", "prepare_lab", "appliance"
     )
     extracted_examples = extract(tasks, collection_name)
-    print(extracted_examples)
     inject(args.target_dir, extracted_examples)
 
 
