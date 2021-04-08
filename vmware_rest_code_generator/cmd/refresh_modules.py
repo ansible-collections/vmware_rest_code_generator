@@ -435,7 +435,7 @@ class AnsibleModuleBase:
             "appliance_health_storage_info",
             "appliance_health_swap_info",
             "appliance_health_system_info",
-            "appliance_health_system_lastcheck",
+            # "appliance_health_system_lastcheck", returns an err500
             "appliance_infraprofile_configs_info",
             "appliance_infraprofile_configs",
             "appliance_localaccounts_globalpolicy_info",
