@@ -1008,7 +1008,7 @@ def main():
         ]:
             ignore_content += f"{f} {test}\n"
 
-    for version in ["2.9", "2.10", "2.11"]:
+    for version in ["2.9", "2.10", "2.11", "2.12"]:
         ignore_file = ignore_dir / f"ignore-{version}.txt"
         ignore_file.write_text(ignore_content)
 
