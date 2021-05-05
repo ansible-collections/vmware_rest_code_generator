@@ -136,6 +136,7 @@ def python_type(value):
 
 def gen_documentation(name, description, parameters):
 
+    short_description = description.split(". ")[0]
     documentation = {
         "author": ["Ansible Cloud Team (@ansible-collections)"],
         "description": description,
@@ -186,7 +187,7 @@ def gen_documentation(name, description, parameters):
             },
         },
         "requirements": ["python >= 3.6", "aiohttp"],
-        "short_description": description,
+        "short_description": short_description,
         "version_added": "1.0.0",
     }
 
@@ -406,7 +407,14 @@ class AnsibleModuleBase:
         self.default_operationIds = None
 
     def description(self):
-        for operationId in self.default_operationIds:
+        prefered_operationId = ["get", "list", "create", "get", "set"]
+        for operationId in prefered_operationId:
+            if operationId not in self.default_operationIds:
+                continue
+            if operationId in self.resource.summary:
+                return self.resource.summary[operationId].split("\n")[0]
+
+        for operationId in sorted(self.default_operationIds):
             if operationId in self.resource.summary:
                 return self.resource.summary[operationId].split("\n")[0]
 
