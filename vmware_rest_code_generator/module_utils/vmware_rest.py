@@ -1,3 +1,6 @@
+# This file is maintained in the vmware_rest_code_generator project
+# https://github.com/ansible-collections/vmware_rest_code_generator
+
 import hashlib
 import importlib
 import json
