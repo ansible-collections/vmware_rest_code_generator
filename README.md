@@ -61,3 +61,7 @@ Run `ansible-test` to validate the result:
     source ~/tmp/venv-tmp-py36-vmware/bin/activate
     pip install -r requirements.txt -r test-requirements.txt ansible
     ansible-test sanity --requirements --local --python 3.6 -vvv
+
+## Code of Conduct
+
+This project is governed by the [Ansible Community code of conduct](https://docs.ansible.com/ansible/latest/community/code_of_conduct.html)
