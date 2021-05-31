@@ -1,3 +1,4 @@
 jinja2
 ruamel.yaml
+pbr
 pyyaml
