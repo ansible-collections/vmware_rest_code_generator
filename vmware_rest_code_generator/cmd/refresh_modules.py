@@ -1107,9 +1107,10 @@ def main():
         "plugins/modules/vcenter_vm_guest_customization.py pep8!skip\n"  # E501: line too long (189 > 160 characters)
         "plugins/modules/appliance_infraprofile_configs.py pep8!skip\n"  # E501: line too long (302 > 160 characters)
     )
-    files = ["plugins/modules/{}.py".format(module) for module in module_list]
-    for f in files:
-        for test in [
+
+    for version in ["2.9", "2.10", "2.11", "2.12"]:
+        files = ["plugins/modules/{}.py".format(module) for module in module_list]
+        skip_list = [
             "compile-2.6!skip",  # Py3.6+
             "compile-2.7!skip",  # Py3.6+
             "compile-3.5!skip",  # Py3.6+
@@ -1118,14 +1119,20 @@ def main():
             "import-3.5!skip",  # Py3.6+
             "future-import-boilerplate!skip",  # Py2 only
             "metaclass-boilerplate!skip",  # Py2 only
-            "validate-modules:missing-if-name-main",
-            "validate-modules:missing-main-call",  # there is an async main()
-        ]:
-            ignore_content += f"{f} {test}\n"
+        ]
+        if version in ["2.9", "2.10", "2.11"]:
+            skip_list += [
+                "validate-modules:missing-if-name-main",
+                "validate-modules:missing-main-call",  # there is an async main()
+            ]
 
-    for version in ["2.9", "2.10", "2.11", "2.12"]:
+        per_version_ignore_content = ignore_content
+        for f in files:
+            for test in skip_list:
+                per_version_ignore_content += f"{f} {test}\n"
+
         ignore_file = ignore_dir / f"ignore-{version}.txt"
-        ignore_file.write_text(ignore_content)
+        ignore_file.write_text(per_version_ignore_content)
 
     dev_md = args.target_dir / "dev.md"
     dev_md.write_text(
