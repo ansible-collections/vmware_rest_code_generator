@@ -885,7 +885,7 @@ class AnsibleModuleBase:
 
     def renderer(self, target_dir, next_version):
 
-        added_ins = get_module_added_ins(self.name)
+        added_ins = get_module_added_ins(self.name, git_dir=target_dir / ".git")
         arguments = gen_arguments_py(self.parameters(), self.list_index())
         documentation = format_documentation(
             gen_documentation(
@@ -1051,11 +1051,11 @@ class SwaggerFile:
         return resources
 
 
-def run_git(*args):
+def run_git(git_dir, *args):
     cmd = [
         "git",
         "--git-dir",
-        "/home/goneri/.ansible/collections/ansible_collections/vmware/vmware_rest/.git",
+        git_dir,
     ]
     for arg in args:
         cmd.append(arg)
@@ -1064,33 +1064,39 @@ def run_git(*args):
 
 
 @lru_cache(maxsize=None)
-def file_by_tag():
-    tags = run_git("tag")
+def file_by_tag(git_dir):
+    tags = run_git(git_dir, "tag")
 
     files_by_tag = {}
     for tag in tags:
-        files_by_tag[tag] = run_git("ls-tree", "-r", "--name-only", tag)
-    from pprint import pprint
+        files_by_tag[tag] = run_git(git_dir, "ls-tree", "-r", "--name-only", tag)
 
     return files_by_tag
 
 
-def get_module_added_ins(module_name):
+def get_module_added_ins(module_name, git_dir):
 
     added_ins = {"module": None, "parameters": {}}
 
     parameters = {}
-    for tag, files in file_by_tag().items():
+    for tag, files in file_by_tag(git_dir).items():
         if f"plugins/modules/{module_name}.py" in files:
+            if not added_ins["module"]:
+                added_ins["module"] = tag
             content = "\n".join(
                 run_git(
-                    "cat-file", "--textconv", f"{tag}:plugins/modules/{module_name}.py"
+                    git_dir,
+                    "cat-file",
+                    "--textconv",
+                    f"{tag}:plugins/modules/{module_name}.py",
                 )
             )
             ast_file = RedBaron(content)
             doc_block = ast_file.find(
                 "assignment", target=lambda x: x.dumps() == "DOCUMENTATION"
             )
+            if not doc_block or not doc_block.value:
+                print(f"Cannot find DOCUMENTATION bloc for module {module_name}")
             doc_content = yaml.safe_load(doc_block.value.to_python())
             for option in doc_content["options"]:
                 if option not in added_ins["parameters"]:
