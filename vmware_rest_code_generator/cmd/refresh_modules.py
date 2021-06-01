@@ -1193,6 +1193,13 @@ def main():
                 "validate-modules:missing-if-name-main",
                 "validate-modules:missing-main-call",  # there is an async main()
             ]
+        elif version == "2.12":
+            # https://docs.python.org/3.10/library/asyncio-eventloop.html#asyncio.get_event_loop
+            # with py3.10, get_event_loop() raises a deprecation warning. We will switch to asyncio.run()
+            # when we will drop py3.6 support.
+            skip_list += [
+                "import-3.10!skip",
+            ]
 
         per_version_ignore_content = ignore_content
         for f in files:
