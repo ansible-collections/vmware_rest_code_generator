@@ -363,7 +363,8 @@ def test_path_to_name():
 
 def test_gen_documentation():
 
-    a = rm.gen_documentation("foo", "bar", my_parameters)
+    added_ins = {"parameters": {}, "module": None}
+    a = rm.gen_documentation("foo", "bar", my_parameters, added_ins, "1.2.3")
     assert a["options"]["vcenter_password"]
 
 

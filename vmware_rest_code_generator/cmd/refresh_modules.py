@@ -12,6 +12,9 @@ import subprocess
 import pkg_resources
 from .content_library_data import content_library_static_ds
 from pbr.version import VersionInfo
+from redbaron import RedBaron
+import yaml
+from functools import lru_cache
 
 
 def jinja2_renderer(template_file, **kwargs):
@@ -135,14 +138,14 @@ def python_type(value):
     return TYPE_MAPPING.get(value, value)
 
 
-def gen_documentation(name, description, parameters):
+def gen_documentation(name, description, parameters, added_ins, next_version):
 
     short_description = description.split(". ")[0]
     documentation = {
         "author": ["Ansible Cloud Team (@ansible-collections)"],
         "description": description,
         "module": name,
-        "notes": ["Tested on vSphere 7.0"],
+        "notes": ["Tested on vSphere 7.0.2"],
         "options": {
             "vcenter_hostname": {
                 "description": [
@@ -187,9 +190,9 @@ def gen_documentation(name, description, parameters):
                 "type": "str",
             },
         },
-        "requirements": ["python >= 3.6", "aiohttp"],
+        "requirements": ["vSphere 7.0.2 or greater", "python >= 3.6", "aiohttp"],
         "short_description": short_description,
-        "version_added": "1.0.0",
+        "version_added": added_ins["module"] or next_version,
     }
 
     # Note: this series of if block is overcomplicated and should
@@ -240,12 +243,13 @@ def gen_documentation(name, description, parameters):
             option["default"] = parameter.get("default")
 
         documentation["options"][normalized_name] = option
+        parameter["added_in"] = (
+            added_ins["parameters"].get(normalized_name) or next_version
+        )
     return documentation
 
 
 def format_documentation(documentation):
-    import yaml
-
     def _sanitize(input):
         if isinstance(input, str):
             return input.replace("':'", ":")
@@ -879,10 +883,18 @@ class AnsibleModuleBase:
         module_py_file = module_dir / "{name}.py".format(name=self.name)
         module_py_file.write_text(content)
 
-    def renderer(self, target_dir):
+    def renderer(self, target_dir, next_version):
+
+        added_ins = get_module_added_ins(self.name)
         arguments = gen_arguments_py(self.parameters(), self.list_index())
         documentation = format_documentation(
-            gen_documentation(self.name, self.description(), self.parameters())
+            gen_documentation(
+                self.name,
+                self.description(),
+                self.parameters(),
+                added_ins,
+                next_version,
+            )
         )
         required_if = self.gen_required_if(self.parameters())
 
@@ -1039,6 +1051,54 @@ class SwaggerFile:
         return resources
 
 
+def run_git(*args):
+    cmd = [
+        "git",
+        "--git-dir",
+        "/home/goneri/.ansible/collections/ansible_collections/vmware/vmware_rest/.git",
+    ]
+    for arg in args:
+        cmd.append(arg)
+    r = subprocess.run(cmd, text=True, capture_output=True)
+    return r.stdout.rstrip().split("\n")
+
+
+@lru_cache(maxsize=None)
+def file_by_tag():
+    tags = run_git("tag")
+
+    files_by_tag = {}
+    for tag in tags:
+        files_by_tag[tag] = run_git("ls-tree", "-r", "--name-only", tag)
+    from pprint import pprint
+
+    return files_by_tag
+
+
+def get_module_added_ins(module_name):
+
+    added_ins = {"module": None, "parameters": {}}
+
+    parameters = {}
+    for tag, files in file_by_tag().items():
+        if f"plugins/modules/{module_name}.py" in files:
+            content = "\n".join(
+                run_git(
+                    "cat-file", "--textconv", f"{tag}:plugins/modules/{module_name}.py"
+                )
+            )
+            ast_file = RedBaron(content)
+            doc_block = ast_file.find(
+                "assignment", target=lambda x: x.dumps() == "DOCUMENTATION"
+            )
+            doc_content = yaml.safe_load(doc_block.value.to_python())
+            for option in doc_content["options"]:
+                if option not in added_ins["parameters"]:
+                    added_ins["parameters"][option] = tag
+
+    return added_ins
+
+
 def main():
 
     parser = argparse.ArgumentParser(description="Build the vmware_rest modules.")
@@ -1048,6 +1108,9 @@ def main():
         type=pathlib.Path,
         default=pathlib.Path("vmware_rest"),
         help="location of the target repository (default: ./vmware_rest)",
+    )
+    parser.add_argument(
+        "--next-version", type=str, default="TODO", help="the next major version",
     )
     args = parser.parse_args()
 
@@ -1070,20 +1133,26 @@ def main():
                     resource, definitions=swagger_file.definitions
                 )
                 if module.is_trusted() and len(module.default_operationIds) > 0:
-                    module.renderer(target_dir=args.target_dir)
+                    module.renderer(
+                        target_dir=args.target_dir, next_version=args.next_version
+                    )
                     module_list.append(module.name)
             elif "get" in resource.operations:
                 module = AnsibleInfoNoListModule(
                     resource, definitions=swagger_file.definitions
                 )
                 if module.is_trusted() and len(module.default_operationIds) > 0:
-                    module.renderer(target_dir=args.target_dir)
+                    module.renderer(
+                        target_dir=args.target_dir, next_version=args.next_version
+                    )
                     module_list.append(module.name)
 
             module = AnsibleModule(resource, definitions=swagger_file.definitions)
 
             if module.is_trusted() and len(module.default_operationIds) > 0:
-                module.renderer(target_dir=args.target_dir)
+                module.renderer(
+                    target_dir=args.target_dir, next_version=args.next_version
+                )
                 module_list.append(module.name)
 
     ignore_dir = args.target_dir / "tests" / "sanity"
