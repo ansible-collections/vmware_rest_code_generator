@@ -3,7 +3,7 @@
 source ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/init.sh
 set -eux
 cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest
-tox -e refresh_modules
+tox -e refresh_modules -- --next-version 2.0.0
 mkdir -p logs
 (
     rm -rf manual/source/vmware_rest_scenarios/task_outputs
