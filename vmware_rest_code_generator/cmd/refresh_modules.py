@@ -454,7 +454,11 @@ class AnsibleModuleBase:
             "appliance_localaccounts_globalpolicy_info",
             "appliance_localaccounts_globalpolicy",
             "appliance_localaccounts_info",
-            "appliance_localaccounts",
+            # we cannot create a functional local account. The 7.0.2 API
+            # creates an account without any UNIX groups.
+            # In addition, only the first role of the list is actually
+            # attached to the new account.
+            # "appliance_localaccounts",
             "appliance_monitoring_info",
             "appliance_monitoring_query",
             "appliance_networking_dns_domains_info",
