@@ -165,7 +165,7 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
             },
             "vcenter_password": {
                 "description": [
-                    "The vSphere vCenter username",
+                    "The vSphere vCenter password",
                     "If the value is not specified in the task, the value of environment variable C(VMWARE_PASSWORD) will be used instead.",
                 ],
                 "type": "str",
