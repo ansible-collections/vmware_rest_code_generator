@@ -137,6 +137,14 @@ async def _update(params, session):
             _json = {}
         if "value" not in _json:  # 7.0.2
            _json = {"value": _json}
+
+        # e.g: content_configuration
+        if not _json and resp.status == 204:
+            async with session.get(_url) as resp_get:
+                _json_get = await resp_get.json()
+                if _json_get:
+                    _json = _json_get
+
         _json["id"] = params.get("{{list_index}}")
         return await update_changed_flag(_json, resp.status, "update")
 
