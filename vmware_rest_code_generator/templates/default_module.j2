@@ -106,9 +106,14 @@ async def _update(params, session):
         else:  # 7.0.2 and greater
             value = _json
         for k, v in value.items():
-            if k in payload and payload[k] == v:
-                del payload[k]
-            elif "spec" in payload:
+            if k in payload:
+                if isinstance(payload[k], dict) and isinstance(v, dict):
+                    for _k in list(payload[k].keys()):
+                        if payload[k][_k] == v.get(_k):
+                            del payload[k][_k]
+                if payload[k] == v  or payload[k] == {}:
+                    del payload[k]
+            elif "spec" in payload:  # 7.0.2 <
                 if k in payload["spec"] and payload["spec"][k] == v:
                     del payload["spec"][k]
 
