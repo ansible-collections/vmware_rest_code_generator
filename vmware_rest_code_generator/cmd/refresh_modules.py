@@ -504,6 +504,8 @@ class AnsibleModuleBase:
             "content_locallibrary",
             "content_subscribedlibrary_info",
             "content_subscribedlibrary",
+            "content_configuration_info",
+            "content_configuration",
             "vcenter_cluster_info",
             "vcenter_datacenter_info",
             "vcenter_datacenter",
