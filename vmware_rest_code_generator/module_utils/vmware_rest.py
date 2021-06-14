@@ -212,7 +212,6 @@ async def update_changed_flag(data, status, operation):
     elif data.get("type", "").startswith("com.vmware.vapi.std.errors"):
         data["failed"] = True
 
-    data["_debug_info"] = {"status": status, "operation": operation}
     return data
 
 
