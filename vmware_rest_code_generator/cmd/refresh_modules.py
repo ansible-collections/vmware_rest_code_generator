@@ -1086,6 +1086,8 @@ def get_module_added_ins(module_name, git_dir):
 
     parameters = {}
     for tag, files in file_by_tag(git_dir).items():
+        if "rc" in tag:
+            continue
         if f"plugins/modules/{module_name}.py" in files:
             if not added_ins["module"]:
                 added_ins["module"] = tag
