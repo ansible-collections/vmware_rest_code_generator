@@ -3108,7 +3108,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/id:{library_id}": {
+        "/rest/com/vmware/content/library/{library_id}": {
             "get": {
                 "tags": [
                     "library"
@@ -3373,7 +3373,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/download-session/id:{download_session_id}": {
+        "/rest/com/vmware/content/library/item/download-session/{download_session_id}": {
             "get": {
                 "tags": [
                     "library/item/download_session"
@@ -3450,7 +3450,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/download-session/id:{download_session_id}?~action=cancel": {
+        "/rest/com/vmware/content/library/item/download-session/{download_session_id}?~action=cancel": {
             "post": {
                 "tags": [
                     "library/item/download_session"
@@ -3494,7 +3494,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/download-session/id:{download_session_id}?~action=fail": {
+        "/rest/com/vmware/content/library/item/download-session/{download_session_id}?~action=fail": {
             "post": {
                 "tags": [
                     "library/item/download_session"
@@ -3546,7 +3546,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/download-session/id:{download_session_id}?~action=keep-alive": {
+        "/rest/com/vmware/content/library/item/download-session/{download_session_id}?~action=keep-alive": {
             "post": {
                 "tags": [
                     "library/item/download_session"
@@ -3638,7 +3638,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/downloadsession/file/id:{download_session_id}?~action=get": {
+        "/rest/com/vmware/content/library/item/downloadsession/file/{download_session_id}?~action=get": {
             "post": {
                 "tags": [
                     "library/item/downloadsession/file"
@@ -3693,7 +3693,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/downloadsession/file/id:{download_session_id}?~action=prepare": {
+        "/rest/com/vmware/content/library/item/downloadsession/file/{download_session_id}?~action=prepare": {
             "post": {
                 "tags": [
                     "library/item/downloadsession/file"
@@ -3795,7 +3795,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/file/id:{library_item_id}?~action=get": {
+        "/rest/com/vmware/content/library/item/file/{library_item_id}?~action=get": {
             "post": {
                 "tags": [
                     "library/item/file"
@@ -3844,7 +3844,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/id:{library_item_id}": {
+        "/rest/com/vmware/content/library/item/{library_item_id}": {
             "get": {
                 "tags": [
                     "library/item"
@@ -3977,7 +3977,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/id:{library_item_id}?~action=publish": {
+        "/rest/com/vmware/content/library/item/{library_item_id}?~action=publish": {
             "post": {
                 "tags": [
                     "library/item"
@@ -4041,7 +4041,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/id:{source_library_item_id}?~action=copy": {
+        "/rest/com/vmware/content/library/item/{source_library_item_id}?~action=copy": {
             "post": {
                 "tags": [
                     "library/item"
@@ -4137,7 +4137,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/storage/id:{library_item_id}?~action=get": {
+        "/rest/com/vmware/content/library/item/storage/{library_item_id}?~action=get": {
             "post": {
                 "tags": [
                     "library/item/storage"
@@ -4273,7 +4273,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/update-session/id:{update_session_id}": {
+        "/rest/com/vmware/content/library/item/update-session/{update_session_id}": {
             "get": {
                 "tags": [
                     "library/item/update_session"
@@ -4406,7 +4406,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/update-session/id:{update_session_id}?~action=cancel": {
+        "/rest/com/vmware/content/library/item/update-session/{update_session_id}?~action=cancel": {
             "post": {
                 "tags": [
                     "library/item/update_session"
@@ -4450,7 +4450,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/update-session/id:{update_session_id}?~action=complete": {
+        "/rest/com/vmware/content/library/item/update-session/{update_session_id}?~action=complete": {
             "post": {
                 "tags": [
                     "library/item/update_session"
@@ -4494,7 +4494,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/update-session/id:{update_session_id}?~action=fail": {
+        "/rest/com/vmware/content/library/item/update-session/{update_session_id}?~action=fail": {
             "post": {
                 "tags": [
                     "library/item/update_session"
@@ -4546,7 +4546,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/update-session/id:{update_session_id}?~action=keep-alive": {
+        "/rest/com/vmware/content/library/item/update-session/{update_session_id}?~action=keep-alive": {
             "post": {
                 "tags": [
                     "library/item/update_session"
@@ -4638,7 +4638,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/updatesession/file/id:{update_session_id}?~action=add": {
+        "/rest/com/vmware/content/library/item/updatesession/file/{update_session_id}?~action=add": {
             "post": {
                 "tags": [
                     "library/item/updatesession/file"
@@ -4699,7 +4699,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/updatesession/file/id:{update_session_id}?~action=get": {
+        "/rest/com/vmware/content/library/item/updatesession/file/{update_session_id}?~action=get": {
             "post": {
                 "tags": [
                     "library/item/updatesession/file"
@@ -4754,7 +4754,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/updatesession/file/id:{update_session_id}?~action=remove": {
+        "/rest/com/vmware/content/library/item/updatesession/file/{update_session_id}?~action=remove": {
             "post": {
                 "tags": [
                     "library/item/updatesession/file"
@@ -4806,7 +4806,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/item/updatesession/file/id:{update_session_id}?~action=validate": {
+        "/rest/com/vmware/content/library/item/updatesession/file/{update_session_id}?~action=validate": {
             "post": {
                 "tags": [
                     "library/item/updatesession/file"
@@ -4895,7 +4895,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/subscribed-item/id:{library_item_id}?~action=evict": {
+        "/rest/com/vmware/content/library/subscribed-item/{library_item_id}?~action=evict": {
             "post": {
                 "tags": [
                     "library/subscribed_item"
@@ -4939,7 +4939,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/subscribed-item/id:{library_item_id}?~action=sync": {
+        "/rest/com/vmware/content/library/subscribed-item/{library_item_id}?~action=sync": {
             "post": {
                 "tags": [
                     "library/subscribed_item"
@@ -5050,7 +5050,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/subscriptions/id:{library}": {
+        "/rest/com/vmware/content/library/subscriptions/{library}": {
             "patch": {
                 "tags": [
                     "library/subscriptions"
@@ -5179,7 +5179,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/subscriptions/id:{library}?~action=delete": {
+        "/rest/com/vmware/content/library/subscriptions/{library}?~action=delete": {
             "post": {
                 "tags": [
                     "library/subscriptions"
@@ -5243,7 +5243,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/library/subscriptions/id:{library}?~action=get": {
+        "/rest/com/vmware/content/library/subscriptions/{library}?~action=get": {
             "post": {
                 "tags": [
                     "library/subscriptions"
@@ -5419,7 +5419,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/local-library/id:{library_id}": {
+        "/rest/com/vmware/content/local-library/{library_id}": {
             "get": {
                 "tags": [
                     "local_library"
@@ -5558,7 +5558,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/local-library/id:{library_id}?~action=publish": {
+        "/rest/com/vmware/content/local-library/{library_id}?~action=publish": {
             "post": {
                 "tags": [
                     "local_library"
@@ -5688,7 +5688,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/subscribed-library/id:{library_id}": {
+        "/rest/com/vmware/content/subscribed-library/{library_id}": {
             "patch": {
                 "tags": [
                     "subscribed_library"
@@ -5827,7 +5827,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/subscribed-library/id:{library_id}?~action=evict": {
+        "/rest/com/vmware/content/subscribed-library/{library_id}?~action=evict": {
             "post": {
                 "tags": [
                     "subscribed_library"
@@ -5871,7 +5871,7 @@
                 }
             }
         },
-        "/rest/com/vmware/content/subscribed-library/id:{library_id}?~action=sync": {
+        "/rest/com/vmware/content/subscribed-library/{library_id}?~action=sync": {
             "post": {
                 "tags": [
                     "subscribed_library"
