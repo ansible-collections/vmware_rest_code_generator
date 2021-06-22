@@ -11,14 +11,16 @@ my_parameters = [
         "type": "integer",
         "required": True,
         "description": "a second parameter. the field must contain identifiers for the resource type: vcenter.vm.hardware.Disk.",
-        "subkeys": [
-            {
+        "subkeys": {
+            "a_subkey": {
                 "type": "ccc",
                 "name": "a_subkey",
                 "description": "more blabla",
                 "required": True,
+                "_operationIds": ["get", "list"],
+                "_required_with_operations": ["list"],
             }
-        ],
+        },
     },
     {
         "name": "ccc",
@@ -682,8 +684,10 @@ def test_AnsibleModule_parameters_complex():
             "name": "placement",
             "operationIds": ["check_out"],
             "required": False,
-            "subkeys": [
-                {
+            "subkeys": {
+                "cluster": {
+                    "_operationIds": ["check_out", "check_out"],
+                    "_required_with_operations": [],
                     "description": "Cluster onto which the virtual machine should "
                     "be placed. If {@name #cluster} and {@name "
                     "#resourcePool} are both specified, {@name "
@@ -692,17 +696,19 @@ def test_AnsibleModule_parameters_complex():
                     "specified, {@name #host} must be a member of "
                     "{@name #cluster}.",
                     "name": "cluster",
-                    "required": False,
                     "type": "string",
                 },
-                {
+                "folder": {
+                    "_operationIds": ["check_out", "check_out"],
+                    "_required_with_operations": [],
                     "description": "Virtual machine folder into which the virtual "
                     "machine should be placed.",
                     "name": "folder",
-                    "required": False,
                     "type": "string",
                 },
-                {
+                "host": {
+                    "_operationIds": ["check_out", "check_out"],
+                    "_required_with_operations": [],
                     "description": "Host onto which the virtual machine should be "
                     "placed. If {@name #host} and {@name "
                     "#resourcePool} are both specified, {@name "
@@ -711,17 +717,17 @@ def test_AnsibleModule_parameters_complex():
                     "specified, {@name #host} must be a member of "
                     "{@name #cluster}.",
                     "name": "host",
-                    "required": False,
                     "type": "string",
                 },
-                {
+                "resource_pool": {
+                    "_operationIds": ["check_out", "check_out"],
+                    "_required_with_operations": [],
                     "description": "Resource pool into which the virtual machine "
                     "should be placed.",
                     "name": "resource_pool",
-                    "required": False,
                     "type": "string",
                 },
-            ],
+            },
             "type": "object",
         },
         {
