@@ -50,23 +50,52 @@ class Description:
 
     @classmethod
     def clean_up(cls, my_string):
+        def rewrite_name(matchobj):
+            print(matchobj.group(0))
+            name = matchobj.group(1)
+            snake_name = cls.to_snake(name)
+            if snake_name[0] == "#":  # operationId:
+                output = f"C({ansible_state(snake_name[1:])})"
+            output = f"C({snake_name})"
+            print(f">{name}< --> {output}")
+            return output
+
+        def rewrite_link(matchobj):
+            name = matchobj.group(1)
+            if "#" in name and name.split("#")[0]:
+                output = name.split("#")[1]
+            else:
+                output = name
+            return output
+
         my_string = my_string.replace(" {@term enumerated type}", "")
         my_string = re.sub(r"{@name DayOfWeek}", "day of the week", my_string)
         my_string = re.sub(r": The\s\S+\senumerated type", ": This option", my_string)
         my_string = re.sub(r" <p> ", " ", my_string)
+        my_string = re.sub(r" See {@.*}.", "", my_string)
+        my_string = re.sub(r"\({@.*?\)", "", my_string)
         my_string = re.sub(r"{@code true}", "C(True)", my_string)
         my_string = re.sub(r"{@code false}", "C(False)", my_string)
-        my_string = re.sub(r"{@code\s+?(.*)}", r"C(\1)", my_string)
-        my_string = re.sub(r"{@param.name\s+?(.*)}", r"C(\1)", my_string)
+        my_string = re.sub(r"{@code\s+?(.*?)}", r"C(\1)", my_string)
+        my_string = re.sub(r"{@param.name\s+?([^}]*)}", rewrite_name, my_string)
+        my_string = re.sub(r"{@name\s+?([^}]*)}", rewrite_name, my_string)
+        # NOTE: it's pretty much impssoble to build something useful
+        # automatically.
+        # my_string = re.sub(r"{@link\s+?([^}]*)}", rewrite_link, my_string)
         for k in content_library_static_ds:
             my_string = re.sub(k, content_library_static_ds[k], my_string)
         return my_string
 
     @classmethod
+    def to_snake(cls, camel_case):
+        camel_case = camel_case.replace("DNS", "dns")
+        return re.sub(r"(?<!^)(?=[A-Z])", "_", camel_case).lower()
+
+    @classmethod
     def ref_to_parameter(cls, ref):
         splitted = ref.split(".")
         my_parameter = splitted[-1].replace("-", "_")
-        return re.sub(r"(?<!^)(?=[A-Z])", "_", my_parameter).lower()
+        return cls.to_snake(my_parameter)
 
     @classmethod
     def write_I(cls, my_string):
