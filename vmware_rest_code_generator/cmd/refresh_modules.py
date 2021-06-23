@@ -514,6 +514,7 @@ class AnsibleModuleBase:
             "vcenter_host_info",
             "vcenter_host",
             "vcenter_network_info",
+            "vcenter_ovf_libraryitem",
             "vcenter_resourcepool_info",
             "vcenter_resourcepool",
             "vcenter_storage_policies_info",
