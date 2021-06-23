@@ -254,7 +254,12 @@ async def build_full_device_list(session, url, device_list):
 
 
 async def get_device_info(session, url, _id):
-    async with session.get(url + "/" + _id) as resp:
+    # workaround for content_library_item_info
+    if "item?library_id=" in url:
+        item_url = url.split("?")[0] + "/" + _id
+    else:
+        item_url = url + "/" + _id
+    async with session.get(item_url) as resp:
         if resp.status == 200:
             _json = await resp.json()
             if "value" not in _json:  # 7.0.2+
