@@ -30,6 +30,26 @@ def normalize_parameter_name(name):
     return name.replace("filter.", "filter_")  # < 7.0.2
 
 
+def ansible_state(operationId, default_operationIds=None):
+    mapping = {
+        "update": "present",
+        "delete": "absent",
+        "create": "present",
+    }
+    # in this case, we don't want to see 'create' in the
+    # "Required with" listi
+    if (
+        default_operationIds
+        and operationId == "update"
+        and "create" not in default_operationIds
+    ):
+        return
+    if operationId in mapping:
+        return mapping[operationId]
+    else:
+        return operationId
+
+
 class Description:
     @classmethod
     def normalize(cls, string_list):
@@ -211,20 +231,28 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
             description.append(parameter["description"])
         if parameter.get("subkeys"):
             description.append("Valid attributes are:")
-            for subkey in parameter.get("subkeys"):
-                subkey["type"] = python_type(subkey["type"])
-                description.append(
-                    " - C({name}) ({type}): {description}".format(**subkey)
+            for sub_k, sub_v in parameter.get("subkeys").items():
+                sub_v["type"] = python_type(sub_v["type"])
+                states = sorted(set([ansible_state(o) for o in sub_v["_operationIds"]]))
+                required_with_operations = sorted(
+                    set([ansible_state(o) for o in sub_v["_required_with_operations"]])
                 )
-                if subkey["required"]:
-                    description.append("   This key is required.")
-                if "enum" in subkey:
+                description.append(
+                    " - C({name}) ({type}): {description} ({states})".format(
+                        **sub_v, states=states
+                    )
+                )
+                if required_with_operations:
+                    description.append(
+                        f"   This key is required with {required_with_operations}."
+                    )
+                if "enum" in sub_v:
                     description.append("   - Accepted values:")
-                    for i in subkey["enum"]:
+                    for i in sub_v["enum"]:
                         description.append(f"     - {i}")
-                if "properties" in subkey:
+                if "properties" in sub_v:
                     description.append("   - Accepted keys:")
-                    for i, v in subkey["properties"].items():
+                    for i, v in sub_v["properties"].items():
                         description.append(
                             f"     - {i} ({v['type']}): {v['description']}"
                         )
@@ -604,7 +632,7 @@ class AnsibleModuleBase:
             payload[operationId] = {"query": {}, "body": {}, "path": {}}
             payload_info = {}
             for parameter in AnsibleModule._property_to_parameter(
-                self.resource.operations[operationId][2], self.definitions
+                self.resource.operations[operationId][2], self.definitions, operationId
             ):
                 _in = parameter["in"] or "body"
 
@@ -642,21 +670,6 @@ class AnsibleModuleBase:
         if "properties" in raw_answer:
             return raw_answer["properties"].keys()
 
-    def ansible_state(self, operationId):
-        mapping = {
-            "update": "present",
-            "delete": "absent",
-            "create": "present",
-        }
-        # in this case, we don't want to see 'create' in the
-        # "Required with" list
-        if operationId == "update" and "create" not in self.default_operationIds:
-            return
-        if operationId in mapping:
-            return mapping[operationId]
-        else:
-            return operationId
-
     def parameters(self):
         def sort_operationsid(input):
             output = sorted(input)
@@ -670,7 +683,7 @@ class AnsibleModuleBase:
                 continue
 
             for parameter in AnsibleModule._property_to_parameter(
-                self.resource.operations[operationId][2], self.definitions
+                self.resource.operations[operationId][2], self.definitions, operationId
             ):
                 name = parameter["name"]
                 if name not in results:
@@ -698,6 +711,23 @@ class AnsibleModuleBase:
 
                 results[name]["operationIds"].append(operationId)
                 results[name]["operationIds"].sort()
+                if "subkeys" in parameter:
+                    if "subkeys" not in results[name]:
+                        results[name]["subkeys"] = {}
+                    for sub_k, sub_v in parameter["subkeys"].items():
+                        if sub_k in results[name]["subkeys"]:
+                            results[name]["subkeys"][sub_k][
+                                "_required_with_operations"
+                            ] += sub_v["_required_with_operations"]
+                            results[name]["subkeys"][sub_k]["_operationIds"] += sub_v[
+                                "_operationIds"
+                            ]
+                            results[name]["subkeys"][sub_k]["description"] = sub_v[
+                                "description"
+                            ]
+                        else:
+                            results[name]["subkeys"][sub_k] = sub_v
+
                 if parameter.get("required"):
                     results[name]["_required_with_operations"].append(operationId)
 
@@ -722,7 +752,7 @@ class AnsibleModuleBase:
 
                     required_with = []
                     for i in result["operationIds"]:
-                        state = self.ansible_state(i)
+                        state = ansible_state(i, self.default_operationIds)
                         if state:
                             required_with.append(state)
                     result["description"] += " Required with I(state={})".format(
@@ -773,16 +803,16 @@ class AnsibleModuleBase:
         by_states = DefaultDict(list)
         for parameter in parameters:
             for operation in parameter.get("_required_with_operations", []):
-                by_states[self.ansible_state(operation)].append(parameter["name"])
+                by_states[ansible_state(operation)].append(parameter["name"])
         entries = []
         for operation, fields in by_states.items():
-            state = self.ansible_state(operation)
+            state = ansible_state(operation)
             if "state" in entries:
                 entries.append(["state", state, sorted(set(fields)), True])
         return entries
 
     @staticmethod
-    def _property_to_parameter(prop_struct, definitions):
+    def _property_to_parameter(prop_struct, definitions, operationId):
         properties = flatten_ref(prop_struct, definitions)
 
         def get_next(properties):
@@ -856,19 +886,22 @@ class AnsibleModuleBase:
                 sub_items = v["items"]
 
             if sub_items:
-                subkeys = []
+                subkeys = {}
                 for sub_k, sub_v in sub_items.items():
                     subkey = {
                         "name": sub_k,
                         "type": sub_v["type"],
                         "description": sub_v.get("description", ""),
-                        "required": True if sub_k in required_subkeys else False,
+                        "_required_with_operations": [operationId]
+                        if sub_k in required_subkeys
+                        else [],
+                        "_operationIds": [operationId],
                     }
                     if "enum" in sub_v:
                         subkey["enum"] = sub_v["enum"]
                     if "properties" in sub_v:
                         subkey["properties"] = sub_v["properties"]
-                    subkeys.append(subkey)
+                    subkeys[sub_k] = subkey
                 parameter["subkeys"] = subkeys
                 parameter["elements"] = "dict"
             parameters.append(parameter)
