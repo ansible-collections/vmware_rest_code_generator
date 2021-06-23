@@ -179,7 +179,6 @@ def main():
         "prepare_lab",
         "vcenter_vm_scenario1",
         "appliance",
-        "content_library",
     ):
         task_dir = (
             args.target_dir / "tests" / "integration" / "targets" / scenario / "tasks"
