@@ -53,10 +53,15 @@ async def _delete(params, session):
 {% elif operation == "create" -%}
 async def _create(params, session):
 
+    unicity_keys = ["{{list_index}}"]
+{% if name.startswith("content_") %}
+    unicity_keys += ["name"]
+{% endif %}
+
     if params["{{list_index}}"]:
         _json = await get_device_info(session, build_url(params), params["{{list_index}}"])
     else:
-        _json = await exists(params, session, build_url(params), ["{{list_index}}"])
+        _json = await exists(params, session, build_url(params), unicity_keys)
     if _json:
         if "value" not in _json:  # 7.0.2+
             _json = {"value": _json}
