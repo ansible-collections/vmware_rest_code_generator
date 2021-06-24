@@ -99,7 +99,7 @@ class Description:
         my_string = re.sub(r"{@code\s+?(.*?)}", r"C(\1)", my_string)
         my_string = re.sub(r"{@param.name\s+?([^}]*)}", rewrite_name, my_string)
         my_string = re.sub(r"{@name\s+?([^}]*)}", rewrite_name, my_string)
-        # NOTE: it's pretty much impssoble to build something useful
+        # NOTE: it's pretty much impossible to build something useful
         # automatically.
         # my_string = re.sub(r"{@link\s+?([^}]*)}", rewrite_link, my_string)
         for k in content_library_static_ds:

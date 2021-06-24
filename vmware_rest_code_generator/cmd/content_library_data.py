@@ -20,4 +20,6 @@ content_library_static_ds = {
     "{@link SubscribedLibrary#sync}": "M(content_subscribedlibrary) with C(state=sync)",
     "{@link SubscribedItem#sync}": "M(content_library_item) with C(state=sync)",
     "{@link SubscribedItem#evict}": "M(content_library_item) with C(state=sync)",
+    "{@link ItemModel}": "item",
+    "{@link Processes#create}": "process",
 }
