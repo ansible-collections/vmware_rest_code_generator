@@ -15,7 +15,7 @@ async def open_session(
     vcenter_password=None,
     validate_certs=True,
     log_file=None,
-    session_timeout=600,
+    session_timeout=300,
 ):
     validate_certs = boolean(validate_certs)
     m = hashlib.sha256()
