@@ -238,6 +238,14 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
                 ],
                 "type": "str",
             },
+            "vcenter_rest_session_timeout": {
+                "description": [
+                    "Timeout settings for client session. ",
+                    "The maximal number of seconds for the whole operation including connection establishment, request sending and response. ",
+                ],
+                "type": "float",
+                "default": "300",
+            },
         },
         "requirements": ["vSphere 7.0.2 or greater", "python >= 3.6", "aiohttp"],
         "short_description": short_description,
