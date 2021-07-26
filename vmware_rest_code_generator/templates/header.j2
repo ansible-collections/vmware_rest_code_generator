@@ -74,7 +74,7 @@ def prepare_argument_spec():
         ),
         "vcenter_rest_session_timeout": dict(
             type='float',
-            default=600,
+            default=300,
             fallback=(env_fallback, ['VMWARE_REST_SESSION_TIMEOUT']),
         )
     }
