@@ -244,7 +244,7 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
                     "The maximal number of seconds for the whole operation including connection establishment, request sending and response. ",
                 ],
                 "type": "float",
-                "default": 600,
+                "default": 300,
             },
         },
         "requirements": ["vSphere 7.0.2 or greater", "python >= 3.6", "aiohttp"],
