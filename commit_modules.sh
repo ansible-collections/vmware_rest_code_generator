@@ -3,6 +3,7 @@
 source ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/init.sh
 set -eux
 cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest
+pip install pylint pycodestyle==2.7.0 pyvmomi requests voluptuous yamllint
 tox -e refresh_modules -- --next-version 2.1.0
 mkdir -p logs
 (
@@ -35,7 +36,7 @@ Manual of the vmware.vmware_rest modules
     tox -e build_manual
     rm docs
 )
-ansible-test sanity --debug --requirements --local --skip-test future-import-boilerplate --skip-test metaclass-boilerplate --python $(python3 -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}")') -vvv
+ansible-test sanity --local --python $(python3 -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}")') -vvv
 git add README.md dev.md plugins docs manual tests/sanity/ignore-*.txt
 git add changelogs
 git commit -S -F commit_message
