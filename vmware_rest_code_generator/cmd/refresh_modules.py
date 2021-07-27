@@ -238,7 +238,7 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
                 ],
                 "type": "str",
             },
-            "vcenter_rest_session_timeout": {
+            "session_timeout": {
                 "description": [
                     "Timeout settings for client session. ",
                     "The maximal number of seconds for the whole operation including connection establishment, request sending and response. ",

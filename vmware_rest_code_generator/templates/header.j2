@@ -72,7 +72,7 @@ def prepare_argument_spec():
             required=False,
             fallback=(env_fallback, ['VMWARE_REST_LOG_FILE']),
         ),
-        "vcenter_rest_session_timeout": dict(
+        "session_timeout": dict(
             type='float',
             default=300,
             fallback=(env_fallback, ['VMWARE_REST_SESSION_TIMEOUT']),
