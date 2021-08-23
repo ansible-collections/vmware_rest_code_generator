@@ -15,7 +15,6 @@ async def open_session(
     vcenter_password=None,
     validate_certs=True,
     log_file=None,
-    session_timeout=300,
 ):
     validate_certs = boolean(validate_certs)
     m = hashlib.sha256()
@@ -93,7 +92,6 @@ async def open_session(
         },
         connector_owner=False,
         trace_configs=trace_configs,
-        timeout=aiohttp.ClientTimeout(total=session_timeout),
     )
     open_session._pool[digest] = session
     return session
@@ -126,6 +124,23 @@ def gen_args(params, in_query_parameter):
         else:
             args += (i + "=") + v
     return args
+
+
+def session_timeout(params):
+    exceptions = importlib.import_module(
+        "ansible_collections.cloud.common.plugins.module_utils.turbo.exceptions"
+    )
+    try:
+        aiohttp = importlib.import_module("aiohttp")
+    except ImportError:
+        raise exceptions.EmbeddedModuleFailure(msg=missing_required_lib("aiohttp"))
+
+    if not aiohttp:
+        raise exceptions.EmbeddedModuleFailure(msg="Failed to import aiohttp")
+    out = {}
+    if params.get("session_timeout"):
+        out["timeout"] = aiohttp.ClientTimeout(total=params.get("session_timeout"))
+    return out
 
 
 async def update_changed_flag(data, status, operation):

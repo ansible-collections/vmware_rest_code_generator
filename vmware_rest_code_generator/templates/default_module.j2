@@ -41,7 +41,7 @@ async def _delete(params, session):
     _url = (
         "https://{vcenter_hostname}"
         "{{_path}}").format(**params) + gen_args(params, _in_query_parameters)
-    async with session.{{ verb }}(_url, json=payload) as resp:
+    async with session.{{ verb }}(_url, json=payload, **session_timeout(params)) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()
@@ -76,7 +76,7 @@ async def _create(params, session):
     _url = (
         "https://{vcenter_hostname}"
         "{{ _path }}").format(**params)
-    async with session.{{ verb }}(_url, json=payload) as resp:
+    async with session.{{ verb }}(_url, json=payload, **session_timeout(params)) as resp:
         if resp.status == 500:
             text = await resp.text()
             raise EmbeddedModuleFailure(f"Request has failed: status={resp.status}, {text}")
@@ -106,7 +106,7 @@ async def _update(params, session):
     _url = (
         "https://{vcenter_hostname}"
         "{{ _path }}").format(**params)
-    async with session.get(_url) as resp:
+    async with session.get(_url, **session_timeout(params)) as resp:
         _json = await resp.json()
         if "value" in _json:
             value = _json["value"]
@@ -141,7 +141,7 @@ async def _update(params, session):
                _json = {"value": _json}
             _json["id"] = params.get("{{list_index}}")
             return await update_changed_flag(_json, resp.status, "get")
-    async with session.{{ verb }}(_url, json=payload) as resp:
+    async with session.{{ verb }}(_url, json=payload, **session_timeout(params)) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()
@@ -152,7 +152,7 @@ async def _update(params, session):
 
         # e.g: content_configuration
         if not _json and resp.status == 204:
-            async with session.get(_url) as resp_get:
+            async with session.get(_url, **session_timeout(params)) as resp_get:
                 _json_get = await resp_get.json()
                 if _json_get:
                     _json = _json_get
@@ -173,10 +173,10 @@ async def _set(params, session):
     _url = (
         "https://{vcenter_hostname}"
         "{{ _path }}").format(**params) + gen_args(params, _in_query_parameters)
-    async with session.get(_url, json=payload) as resp:
+    async with session.get(_url, json=payload, **session_timeout(params)) as resp:
           before = await resp.json()
 
-    async with session.put(_url, json=payload) as resp:
+    async with session.put(_url, json=payload, **session_timeout(params)) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()
@@ -186,7 +186,7 @@ async def _set(params, session):
            _json = {"value": _json}
         # The PUT answer does not let us know if the resource has actually been
         # modified
-        async with session.get(_url, json=payload) as resp_get:
+        async with session.get(_url, json=payload, **session_timeout(params)) as resp_get:
             after = await resp_get.json()
             if before == after:
                 return await update_changed_flag(after, resp_get.status, "get")
@@ -207,7 +207,7 @@ async def _{{ operation }}(params, session):
         "https://{vcenter_hostname}"
         # aa
         "{{ _path }}").format(**params) + gen_args(params, _in_query_parameters)
-    async with session.{{ verb }}(_url, json=payload) as resp:
+    async with session.{{ verb }}(_url, json=payload, **session_timeout(params)) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()
