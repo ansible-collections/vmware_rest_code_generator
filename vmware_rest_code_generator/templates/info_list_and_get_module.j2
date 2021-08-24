@@ -17,7 +17,7 @@ def build_url(params):
 
 async def entry_point(module, session):
     url = build_url(module.params)
-    async with session.get(url) as resp:
+    async with session.get(url, **session_timeout(module.params)) as resp:
         _json = await resp.json()
 
         if "value" not in _json:  # 7.0.2+

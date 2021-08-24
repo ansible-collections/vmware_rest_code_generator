@@ -39,6 +39,7 @@ from ansible_collections.vmware.vmware_rest.plugins.module_utils.vmware_rest imp
     open_session,
     prepare_payload,
     update_changed_flag,
+    session_timeout,
     )
 
 
@@ -74,9 +75,9 @@ def prepare_argument_spec():
         ),
         "session_timeout": dict(
             type='float',
-            default=300,
-            fallback=(env_fallback, ['VMWARE_REST_SESSION_TIMEOUT']),
-        )
+            required=False,
+            fallback=(env_fallback, ["VMWARE_SESSION_TIMEOUT"]),
+        ),
     }
 
     {{arguments}}
@@ -102,8 +103,7 @@ async def main():
             vcenter_username=module.params['vcenter_username'],
             vcenter_password=module.params['vcenter_password'],
             validate_certs=module.params['vcenter_validate_certs'],
-            log_file=module.params['vcenter_rest_log_file'],
-            session_timeout=module.params['session_timeout'])
+            log_file=module.params['vcenter_rest_log_file'],)
     except EmbeddedModuleFailure as err:
         module.fail_json(err.get_message())
     result = await entry_point(module, session)

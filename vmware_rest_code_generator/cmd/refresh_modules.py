@@ -242,9 +242,9 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
                 "description": [
                     "Timeout settings for client session. ",
                     "The maximal number of seconds for the whole operation including connection establishment, request sending and response. ",
+                    "The default value is 300s.",
                 ],
                 "type": "float",
-                "default": "300",
                 "version_added": "2.1.0",
             },
         },
