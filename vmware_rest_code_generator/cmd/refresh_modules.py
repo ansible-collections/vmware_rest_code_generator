@@ -71,13 +71,11 @@ class Description:
     @classmethod
     def clean_up(cls, my_string):
         def rewrite_name(matchobj):
-            print(matchobj.group(0))
             name = matchobj.group(1)
             snake_name = cls.to_snake(name)
             if snake_name[0] == "#":  # operationId:
                 output = f"C({ansible_state(snake_name[1:])})"
             output = f"C({snake_name})"
-            print(f">{name}< --> {output}")
             return output
 
         def rewrite_link(matchobj):
@@ -312,6 +310,16 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
         parameter["added_in"] = (
             added_ins["parameters"].get(normalized_name) or next_version
         )
+
+    raw_content = pkg_resources.resource_string(
+        "vmware_rest_code_generator", "config/modules.yaml"
+    )
+    module_from_config = get_module_from_config(name)
+    if module_from_config and "documentation" in module_from_config:
+        for k, v in module_from_config["documentation"].items():
+            documentation[k] = v
+            print(k)
+            print(v)
     return documentation
 
 
@@ -335,10 +343,18 @@ def format_documentation(documentation):
         "author",
         "version_added",
         "requirements",
+        "seealso",
+        "notes",
     ]
     final = "r'''\n"
     for i in keys:
-        final += yaml.dump({i: _sanitize(documentation[i])}, indent=2)
+        if i not in documentation:
+            continue
+        if isinstance(documentation[i], str):
+            sanitized = _sanitize(documentation[i])
+        else:
+            sanitized = documentation[i]
+        final += yaml.dump({i: sanitized}, indent=2)
     final += "'''"
     return final
 
@@ -463,6 +479,16 @@ def flatten_ref(tree, definitions):
     return tree
 
 
+def get_module_from_config(module):
+    raw_content = pkg_resources.resource_string(
+        "vmware_rest_code_generator", "config/modules.yaml"
+    )
+    for i in yaml.load(raw_content):
+        if module in i:
+            return i[module]
+    return False
+
+
 class Resource:
     def __init__(self, name):
         self.name = name
@@ -496,15 +522,10 @@ class AnsibleModuleBase:
         return list(self.resource.operations.values())[0][1]
 
     def is_trusted(self):
-        raw_content = pkg_resources.resource_string(
-            "vmware_rest_code_generator", "config/modules.yaml"
-        )
-        trusted_list = [next(iter(i)) for i in yaml.load(raw_content)]
-        if self.name in trusted_list:
-            return True
-        else:
+        if get_module_from_config(self.name) is False:
             print(f"- do not build: {self.name}")
-            return False
+        else:
+            return True
 
     def list_index(self):
         for i in ["get", "update", "delete"]:
