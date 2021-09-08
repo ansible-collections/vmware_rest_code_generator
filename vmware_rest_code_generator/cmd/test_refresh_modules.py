@@ -35,7 +35,7 @@ documentation_data_input = {
     "author": ["Goneri Le Bouder (@goneri) <goneri@lebouder.net>"],
     "description": "bar",
     "module": "foo",
-    "notes": ["Tested on vSphere 7.0"],
+    "notes": ["Tested on vSphere 7.0.2"],
     "options": {
         "aaa": {
             "description": [
@@ -395,7 +395,7 @@ options:
     - b
     - c
     description:
-    - '3rd parameter is : enum,'
+    - 3rd parameter is ':' enum,
     - ''
     - and this string is long and comes with a ' on purpose. This way, we can use
       it to ensure format_documentation() can break it up.
@@ -420,6 +420,8 @@ version_added: 1.0.0
 requirements:
 - python >= 3.6
 - aiohttp
+notes:
+- Tested on vSphere 7.0.2
 '''"""
 
     assert rm.format_documentation(documentation_data_input) == expectation
