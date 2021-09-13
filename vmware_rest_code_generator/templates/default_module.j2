@@ -162,7 +162,7 @@ async def _update(params, session):
 
 
 {% elif operation == "set" -%}
-async def _set(params, session):
+async def _{{ operation  }}(params, session):
     _in_query_parameters = PAYLOAD_FORMAT["{{ operation }}"]["query"].keys()
     payload = prepare_payload(params, PAYLOAD_FORMAT["{{ operation }}"])
     subdevice_type = get_subdevice_type("{{ _path }}")
@@ -176,7 +176,7 @@ async def _set(params, session):
     async with session.get(_url, json=payload, **session_timeout(params)) as resp:
           before = await resp.json()
 
-    async with session.put(_url, json=payload, **session_timeout(params)) as resp:
+    async with session.{{ verb  }}(_url, json=payload, **session_timeout(params)) as resp:
         try:
             if resp.headers["Content-Type"] == "application/json":
                 _json = await resp.json()
@@ -184,6 +184,31 @@ async def _set(params, session):
             _json = {}
         if "value" not in _json:  # 7.0.2
            _json = {"value": _json}
+
+
+        {% if _path == "/api/appliance/networking/dns/servers" %}
+        if (
+                resp.status == 500
+                and
+                "messages" in _json["value"]
+                and
+                _json["value"]["messages"]
+                and
+                "id" in _json["value"]["messages"][0]
+                and
+                _json["value"]["messages"][0]["id"] == "com.vmware.applmgmt.err_operation_failed"
+                and
+                "args" in _json["value"]["messages"][0]
+                and
+                "changing state RUNNING → CLOSED" in _json["value"]["messages"][0]["args"][0]
+        ):
+            # vSphere 7.0.2, a network configuration changes of the appliance raise a systemd error,
+            # but the change is applied. The problem can be resolved by a yum update.
+            async with session.get(_url, json=payload, **session_timeout(params)) as resp:
+                _json = {"value": await resp.json()}
+        {% endif %}
+
+
         # The PUT answer does not let us know if the resource has actually been
         # modified
         if resp.status < 300:
@@ -216,6 +241,31 @@ async def _{{ operation }}(params, session):
             _json = {}
         if "value" not in _json:  # 7.0.2
            _json = {"value": _json}
+
+
+        {% if _path == "/api/appliance/networking/dns/servers" %}
+        if (
+                resp.status == 500
+                and
+                "messages" in _json["value"]
+                and
+                _json["value"]["messages"]
+                and
+                "id" in _json["value"]["messages"][0]
+                and
+                _json["value"]["messages"][0]["id"] == "com.vmware.applmgmt.err_operation_failed"
+                and
+                "args" in _json["value"]["messages"][0]
+                and
+                "changing state RUNNING → CLOSED" in _json["value"]["messages"][0]["args"][0]
+        ):
+            # vSphere 7.0.2, a network configuration changes of the appliance raise a systemd error,
+            # but the change is applied. The problem can be resolved by a yum update.
+            async with session.get(_url, json=payload, **session_timeout(params)) as resp:
+                _json = {"value": await resp.json()}
+        {% endif %}
+
+
         return await update_changed_flag(_json, resp.status, "{{ operation }}")
 {% endif %}
 
