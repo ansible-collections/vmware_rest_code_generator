@@ -3,7 +3,7 @@
 source ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/init.sh
 set -eux
 cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest
-pip install pylint pycodestyle==2.7.0 pyvmomi requests voluptuous yamllint antsibull-changelog
+pip install pylint pycodestyle==2.7.0 pyvmomi requests voluptuous yamllint antsibull-changelog aiohttp
 tox -e refresh_modules -- --next-version 2.1.0
 mkdir -p logs
 (
@@ -21,22 +21,15 @@ mkdir -p logs
 tox -e black
 tox -e add_docs
 
-(
-    cd manual/source
-    echo "****************************************
-Manual of the vmware.vmware_rest modules
-****************************************
+# See: https://github.com/ansible-network/collection_prep/pull/66
+git checkout -- docs/docsite/
 
-.. toctree::
-    :maxdepth: 1
-" > docs.rst
-    test -s docs && rm docs
-    ln -s ../../docs .
-    find docs/ -name '*.rst'|grep '/'|sort|sed 's,\(.*\).rst$,    \1,' >> docs.rst
-    tox -e build_manual
-    rm docs
-)
+tox -e build_manual
+
+find docs/docsite/rst/ -name '*.rst' -exec sed -i 's,’,",g' '{}' \;
+
 ansible-test sanity --local --python $(python3 -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}")') -vvv
-git add README.md dev.md plugins docs manual tests/sanity/ignore-*.txt
+rm -r docs/docsite/rst/.doctrees
+git add README.md dev.md plugins docs tests/sanity/ignore-*.txt
 git add changelogs
 git commit -S -F commit_message
