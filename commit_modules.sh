@@ -1,10 +1,13 @@
 #!/bin/bash
+version=${1:-version_no_set}
+# avoid PYLINTHOME is now '/home/goneri/.cache/pylint' but obsolescent '/home/goneri/.pylint.d' is found; you can safely remove the latter
+rm -r ~/.pylint.d ~/.cache/pylint
 # Use this script to commit an update of the vmare_rest collection
 source ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/init.sh
 set -eux
 cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest
 pip install pylint pycodestyle==2.7.0 pyvmomi requests voluptuous yamllint antsibull-changelog aiohttp
-tox -e refresh_modules -- --next-version 2.1.0
+tox -e refresh_modules -- --next-version ${version}
 mkdir -p logs
 (
     rm -rf manual/source/vmware_rest_scenarios/task_outputs
@@ -31,5 +34,6 @@ find docs/docsite/rst/ -name '*.rst' -exec sed -i 's,’,",g' '{}' \;
 ansible-test sanity --local --python $(python3 -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}")') -vvv
 rm -r docs/docsite/rst/.doctrees
 git add README.md dev.md plugins docs tests/sanity/ignore-*.txt
+tox -e antsibull-changelog -- release --verbose --version ${version}
 git add changelogs
 git commit -S -F commit_message
