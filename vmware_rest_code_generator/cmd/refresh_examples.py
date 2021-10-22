@@ -172,7 +172,7 @@ def main():
 
     args = parser.parse_args()
     galaxy_file = args.target_dir / "galaxy.yml"
-    galaxy = yaml.load(galaxy_file.open())
+    galaxy = yaml.safe_load(galaxy_file.open())
     collection_name = f"{galaxy['namespace']}.{galaxy['name']}"
     tasks = []
     for scenario in (
