@@ -789,16 +789,19 @@ class AnsibleModuleBase:
                 "in": v.get("in"),
             }
             if "enum" in v:
-                parameter["enum"] = v["enum"]
+                parameter["enum"] = sorted(set(v["enum"]))
 
             sub_items = None
             required_subkeys = v.get("required", [])
+
             if "properties" in v:
                 sub_items = v["properties"]
-                required_subkeys = v["properties"].get("required", [])
+                if "required" in v["properties"]:  # NOTE: do we still need these
+                    required_subkeys = v["properties"]["required"]
             elif "items" in v and "properties" in v["items"]:
                 sub_items = v["items"]["properties"]
-                required_subkeys = v["items"].get("required", [])
+                if "required" in v["items"]:  # NOTE: do we still need these
+                    required_subkeys = v["items"]["required"]
             elif "items" in v and "name" not in v["items"]:
                 parameter["elements"] = v["items"].get("type", "str")
             elif "items" in v and v["items"]["name"]:
