@@ -12,7 +12,8 @@ import subprocess
 import pkg_resources
 from .content_library_data import content_library_static_ds
 from pbr.version import VersionInfo
-from redbaron import RedBaron
+import baron
+import redbaron
 import yaml
 from functools import lru_cache
 
@@ -1052,7 +1053,11 @@ def get_module_added_ins(module_name, git_dir):
                     f"{tag}:plugins/modules/{module_name}.py",
                 )
             )
-            ast_file = RedBaron(content)
+            try:
+                ast_file = redbaron.RedBaron(content)
+            except baron.BaronError as e:
+                print(f"Failed to parse {tag}:plugins/modules/{module_name}.py. {e}")
+                continue
             doc_block = ast_file.find(
                 "assignment", target=lambda x: x.dumps() == "DOCUMENTATION"
             )
