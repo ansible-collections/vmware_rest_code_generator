@@ -318,8 +318,6 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
     if module_from_config and "documentation" in module_from_config:
         for k, v in module_from_config["documentation"].items():
             documentation[k] = v
-            print(k)
-            print(v)
     return documentation
 
 
