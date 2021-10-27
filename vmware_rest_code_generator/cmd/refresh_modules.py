@@ -284,7 +284,7 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
                     )
                 if "enum" in sub_v:
                     description.append("   - Accepted values:")
-                    for i in sub_v["enum"]:
+                    for i in sorted(sub_v["enum"]):
                         description.append(f"     - {i}")
                 if "properties" in sub_v:
                     description.append("   - Accepted keys:")
@@ -294,7 +294,7 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
                         )
                         if v.get("enum"):
                             description.append("Accepted value for this field:")
-                            for val in v.get("enum"):
+                            for val in sorted(v.get("enum")):
                                 description.append(f"       - C({val})")
 
         option["description"] = list(Description.normalize(description))
@@ -626,6 +626,7 @@ class AnsibleModuleBase:
                         results[name]["description"] = parameter["description"]
                 if "enum" in parameter:
                     results[name]["enum"] += parameter["enum"]
+                    results[name]["enum"] = sorted(set(results[name]["enum"]))
 
                 results[name]["operationIds"].append(operationId)
                 results[name]["operationIds"].sort()
