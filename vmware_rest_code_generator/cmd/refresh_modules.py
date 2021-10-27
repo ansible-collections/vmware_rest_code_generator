@@ -483,7 +483,7 @@ def get_module_from_config(module):
     raw_content = pkg_resources.resource_string(
         "vmware_rest_code_generator", "config/modules.yaml"
     )
-    for i in yaml.load(raw_content):
+    for i in yaml.safe_load(raw_content):
         if module in i:
             return i[module]
     return False
