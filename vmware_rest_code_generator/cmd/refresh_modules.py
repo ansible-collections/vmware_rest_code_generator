@@ -1142,7 +1142,7 @@ def main():
         "plugins/modules/appliance_infraprofile_configs.py pep8!skip\n"  # E501: line too long (302 > 160 characters)
     )
 
-    for version in ["2.9", "2.10", "2.11", "2.12"]:
+    for version in ["2.9", "2.10", "2.11", "2.12", "2.13"]:
         files = ["plugins/modules/{}.py".format(module) for module in module_list]
         skip_list = [
             "compile-2.6!skip",  # Py3.6+
