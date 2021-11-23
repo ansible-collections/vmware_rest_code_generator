@@ -344,7 +344,7 @@ def get_subdevice_type(url):
             candidates.append(i[1:-1])
     if len(candidates) != 2:
         return
-    return candidates[-1]
+    return candidates[-1].split("}")[0]
 
 
 def get_device_type(url):
