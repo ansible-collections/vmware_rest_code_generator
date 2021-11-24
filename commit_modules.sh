@@ -37,7 +37,7 @@ ansible-test sanity --local --python $(python3 -c 'import sys;print(f"{sys.versi
 rm -r docs/docsite/rst/.doctrees
 rm -r tests/output/.tmp
 tox -e linters
-git add README.md dev.md plugins docs tests/sanity/ignore-*.txt
+git add CHANGELOG.rst README.md dev.md plugins docs tests/sanity/ignore-*.txt
 tox -e antsibull-changelog -- release --verbose --version ${version}
 git add changelogs
 git commit -S -F commit_message
