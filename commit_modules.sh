@@ -35,6 +35,8 @@ find docs/docsite/rst/ -name '*.rst' -exec sed -i 's,’,",g' '{}' \;
 
 ansible-test sanity --local --python $(python3 -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}")') -vvv
 rm -r docs/docsite/rst/.doctrees
+rm -r tests/output/.tmp
+tox -e linters
 git add README.md dev.md plugins docs tests/sanity/ignore-*.txt
 tox -e antsibull-changelog -- release --verbose --version ${version}
 git add changelogs
