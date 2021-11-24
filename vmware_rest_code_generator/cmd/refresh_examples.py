@@ -178,6 +178,7 @@ def main():
     for scenario in (
         "prepare_lab",
         "vcenter_vm_scenario1",
+        "vcenter_vm_customize",
         "appliance",
     ):
         task_dir = (
