@@ -16,6 +16,8 @@ mkdir -p logs
     ./refresh_RETURN_block.sh
     cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/vcenter_vm_customize
     ./refresh_RETURN_block.sh
+    cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/vcenter_library_and_ovf_clone
+    ./refresh_RETURN_block.sh
      cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/appliance
     ./refresh_RETURN_block.sh
 )
