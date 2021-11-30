@@ -1128,33 +1128,30 @@ def main():
                 )
                 module_list.append(module.name)
 
+    files = [f"plugins/modules/{module}.py" for module in module_list]
+    files += ["plugins/module_utils/vmware_rest.py"]
     ignore_dir = args.target_dir / "tests" / "sanity"
     ignore_dir.mkdir(parents=True, exist_ok=True)
-    ignore_content = "plugins/module_utils/vmware_rest.py compile-2.6!skip\n"
-    ignore_content += "plugins/module_utils/vmware_rest.py compile-2.7!skip\n"
-    ignore_content += "plugins/module_utils/vmware_rest.py compile-3.5!skip\n"
-    ignore_content += "plugins/module_utils/vmware_rest.py import-2.6!skip\n"
-    ignore_content += "plugins/module_utils/vmware_rest.py import-2.7!skip\n"
-    ignore_content += "plugins/module_utils/vmware_rest.py import-3.5!skip\n"
-    ignore_content += "plugins/module_utils/vmware_rest.py metaclass-boilerplate!skip\n"
-    ignore_content += (
-        "plugins/module_utils/vmware_rest.py future-import-boilerplate!skip\n"
+    ignore_content = (
         "plugins/modules/vcenter_vm_guest_customization.py pep8!skip\n"  # E501: line too long (189 > 160 characters)
         "plugins/modules/appliance_infraprofile_configs.py pep8!skip\n"  # E501: line too long (302 > 160 characters)
     )
 
     for version in ["2.9", "2.10", "2.11", "2.12", "2.13"]:
-        files = ["plugins/modules/{}.py".format(module) for module in module_list]
         skip_list = [
-            "compile-2.6!skip",  # Py3.6+
             "compile-2.7!skip",  # Py3.6+
             "compile-3.5!skip",  # Py3.6+
-            "import-2.6!skip",  # Py3.6+
             "import-2.7!skip",  # Py3.6+
             "import-3.5!skip",  # Py3.6+
             "future-import-boilerplate!skip",  # Py2 only
             "metaclass-boilerplate!skip",  # Py2 only
         ]
+        # No py26 tests with 2.13 and greater
+        if version in ["2.9", "2.10", "2.11", "2.12"]:
+            skip_list += [
+                "compile-2.6!skip",  # Py3.6+
+                "import-2.6!skip",  # Py3.6+
+            ]
         if version in ["2.9", "2.10", "2.11"]:
             skip_list += [
                 "validate-modules:missing-if-name-main",
