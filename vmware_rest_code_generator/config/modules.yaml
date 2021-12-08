@@ -91,11 +91,7 @@
     documentation:
       short_description: Applies a customization specification on the virtual machine
       description: Applies a customization specification on the virtual machine in {@param.name vm}. The actual customization happens inside the guest when the virtual machine is powered on. If there is a pending customization for the virtual machine and a new one is set, then the existing customization setting will be overwritten with the new settings.
-- vcenter_vm_guest_environment_info:
 - vcenter_vm_guest_filesystem_directories:
-- vcenter_vm_guest_filesystem_files_info:
-- vcenter_vm_guest_filesystem_files:
-- vcenter_vm_guest_filesystem:
 - vcenter_vm_guest_identity_info:
 - vcenter_vm_guest_localfilesystem_info:
 - vcenter_vm_guest_networking_info:
@@ -110,8 +106,6 @@
         - module: vmware.vmware_rest.vcenter_vm_power
           description: A module to boot, hard shutdown and hard reset guest
       description: Issues a request to the guest operating system asking it to perform a soft shutdown, standby (suspend) or soft reboot. This request returns immediately and does not wait for the guest operating.
-- vcenter_vm_guest_processes_info:
-- vcenter_vm_guest_processes:
 - vcenter_vm_hardware_adapter_sata_info:
 - vcenter_vm_hardware_adapter_sata:
 - vcenter_vm_hardware_adapter_scsi_info:
