@@ -175,15 +175,11 @@ def main():
     galaxy = yaml.safe_load(galaxy_file.open())
     collection_name = f"{galaxy['namespace']}.{galaxy['name']}"
     tasks = []
-    for scenario in (
-        "prepare_lab",
-        "vcenter_vm_scenario1",
-        "vcenter_vm_customize",
-        "appliance",
-    ):
-        task_dir = (
-            args.target_dir / "tests" / "integration" / "targets" / scenario / "tasks"
-        )
+    test_scenarios_dir = args.target_dir / "tests" / "integration" / "targets"
+    for scenario_dir in test_scenarios_dir.glob("*"):
+        if not scenario_dir.is_dir():
+            continue
+        task_dir = scenario_dir / "tasks"
         tasks += get_tasks(task_dir)
     extracted_examples = extract(tasks, collection_name)
     inject(args.target_dir, extracted_examples)
