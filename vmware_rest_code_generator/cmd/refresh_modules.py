@@ -88,6 +88,8 @@ class Description:
             return output
 
         my_string = my_string.replace(" {@term enumerated type}", "")
+        my_string = my_string.replace(" {@term list}", "list")
+        my_string = my_string.replace(" {@term operation}", "operation")
         my_string = re.sub(r"{@name DayOfWeek}", "day of the week", my_string)
         my_string = re.sub(r": The\s\S+\senumerated type", ": This option", my_string)
         my_string = re.sub(r" <p> ", " ", my_string)
