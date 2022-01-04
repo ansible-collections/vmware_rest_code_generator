@@ -17,9 +17,9 @@ content_library_static_ds = {
     "{@link PublishInfo#persistJsonEnabled}": "C(publish_info.persist_json_enabled)",
     "{@link PublishInfo#publishUrl}": "C(publish_info.publish_url)",
     "{@link ConfigurationModel#automaticSyncEnabled}": "C(configuration_model.automatic_sync_enabled)",
-    "{@link SubscribedLibrary#sync}": "M(content_subscribedlibrary) with C(state=sync)",
-    "{@link SubscribedItem#sync}": "M(content_library_item) with C(state=sync)",
-    "{@link SubscribedItem#evict}": "M(content_library_item) with C(state=sync)",
+    "{@link SubscribedLibrary#sync}": "M(vmware.vmware_rest.content_subscribedlibrary) with C(state=sync)",
+    "{@link SubscribedItem#sync}": "M(vmware.vmware_rest.content_library_item) with C(state=sync)",
+    "{@link SubscribedItem#evict}": "M(vmware.vmware_rest.content_library_item) with C(state=sync)",
     "{@link ItemModel}": "item",
     "{@link Processes#create}": "process",
 }
