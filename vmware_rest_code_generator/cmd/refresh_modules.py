@@ -168,12 +168,12 @@ class Description:
         if f"must be an identifier for the resource type: {resource_name}" in my_string:
             return my_string.replace(
                 f"must be an identifier for the resource type: {resource_name}",
-                f"must be the id of a resource returned by M({module_name})",
+                f"must be the id of a resource returned by M(vmware.vmware_rest.{module_name})",
             )
         if f"identifiers for the resource type: {resource_name}" in my_string:
             return my_string.replace(
                 f"identifiers for the resource type: {resource_name}",
-                f"the id of resources returned by M({module_name})",
+                f"the id of resources returned by M(vmware.vmware_rest.{module_name})",
             ).rstrip()
 
 
