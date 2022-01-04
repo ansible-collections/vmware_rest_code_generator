@@ -1168,6 +1168,11 @@ def main():
         per_version_ignore_content = ignore_content
         for f in files:
             for test in skip_list:
+                # Sanity test 'validate-modules' does not test path 'plugins/module_utils/vmware_rest.py'
+                if version in ["2.9", "2.10", "2.11"]:
+                    if f == "plugins/module_utils/vmware_rest.py":
+                        if test.startswith("validate-modules:"):
+                            continue
                 per_version_ignore_content += f"{f} {test}\n"
 
         ignore_file = ignore_dir / f"ignore-{version}.txt"
