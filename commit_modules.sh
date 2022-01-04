@@ -35,7 +35,7 @@ tox -e build_manual
 
 find docs/docsite/rst/ -name '*.rst' -exec sed -i 's,’,",g' '{}' \;
 
-ansible-test sanity --local --python $(python3 -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}")') -vvv
+$(which ansible-test) sanity --docker -vvv
 rm -r docs/docsite/rst/.doctrees
 rm -rf tests/output/.tmp
 tox -e linters
