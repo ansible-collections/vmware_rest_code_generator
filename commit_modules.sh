@@ -35,7 +35,7 @@ tox -e build_manual
 
 find docs/docsite/rst/ -name '*.rst' -exec sed -i 's,’,",g' '{}' \;
 
-$(which ansible-test) sanity --docker -vvv
+$(which ansible-test) sanity -vvv
 rm -r docs/docsite/rst/.doctrees
 rm -rf tests/output/.tmp
 tox -e linters
