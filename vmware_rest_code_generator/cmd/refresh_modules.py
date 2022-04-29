@@ -542,7 +542,7 @@ class AnsibleModuleBase:
             return m.group(1)
 
     def payload(self):
-        """"Return a structure that describe the format of the data to send back."""
+        """ "Return a structure that describe the format of the data to send back."""
         payload = {}
         # for operationId in self.resource.operations:
         for operationId in self.default_operationIds:
@@ -1085,7 +1085,10 @@ def main():
         help="location of the target repository (default: ./vmware_rest)",
     )
     parser.add_argument(
-        "--next-version", type=str, default="TODO", help="the next major version",
+        "--next-version",
+        type=str,
+        default="TODO",
+        help="the next major version",
     )
     args = parser.parse_args()
 
