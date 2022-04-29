@@ -1134,7 +1134,17 @@ def main():
                 module_list.append(module.name)
 
     files = [f"plugins/modules/{module}.py" for module in module_list]
-    files += ["plugins/module_utils/vmware_rest.py"]
+    files += [
+        "plugins/module_utils/vmware_rest.py",
+        "plugins/lookup/cluster_moid.py",
+        "plugins/lookup/datacenter_moid.py",
+        "plugins/lookup/datastore_moid.py",
+        "plugins/lookup/folder_moid.py",
+        "plugins/lookup/host_moid.py",
+        "plugins/lookup/network_moid.py",
+        "plugins/lookup/resource_pool_moid.py",
+        "plugins/lookup/vm_moid.py",
+    ]
     ignore_dir = args.target_dir / "tests" / "sanity"
     ignore_dir.mkdir(parents=True, exist_ok=True)
     ignore_content = (
