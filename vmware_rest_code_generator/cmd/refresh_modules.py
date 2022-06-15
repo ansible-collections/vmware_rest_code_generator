@@ -991,6 +991,9 @@ class SwaggerFile:
     def init_resources(paths):
         resources = {}
         for path in paths:
+            if "vmw-task=true" in path.path:
+                continue
+
             name = path_to_name(path.path)
             if name == "esx_settings_clusters_software_drafts":
                 continue
