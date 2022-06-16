@@ -50,30 +50,61 @@ async def _delete(params, session):
         return await update_changed_flag(_json, resp.status, "delete")
 
 
-{% if list_index %}
-async def lookup_with_filters(params, session, url):
-    # e.g: for the datacenter resources
-    async with session.get(f"{url}?names={params['name']}&folders={params['folder']}") as resp:
-        _json = await resp.json()
-        if isinstance(_json, list) and len(_json) == 1:
-            return await get_device_info(session, url, _json[0]["{{list_index}}"])
-{% endif %}
 
-{% elif operation == "create" -%}
-async def _create(params, session):
+{% elif operation in ["create", "clone", "instant_clone"] -%}
+async def _{{ operation }}(params, session):
 
-{% if list_index %}
-    unicity_keys = ["{{list_index}}"]
 {% if name.startswith("content_") %}
-    unicity_keys += ["name"]
+    {% set haz_lookup = 1 %}
+    lookup_url = per_id_url = build_url(params)
+    uniquity_keys = ["name"]
+    comp_func = None
+{% elif name == "vcenter_vmtemplate_libraryitems" %}
+    {% set haz_lookup = 1 %}
+    lookup_url = "https://{vcenter_hostname}/api/content/library/item?library_id={library}".format(**params)
+    per_id_url = "https://{vcenter_hostname}/api/content/library/item".format(**params)
+    uniquity_keys = ["name"]
+    comp_func = None
+{% elif name == "vcenter_ovf_libraryitem" %}
+    {% set haz_lookup = 1 %}
+    library_id = params['target']['library_id'] if 'library_id' in params["target"] else None
+    lookup_url = f"https://{params['vcenter_hostname']}/api/content/library/item?library_id={library_id}"
+    per_id_url = "https://{vcenter_hostname}/api/content/library/item".format(**params)
+    uniquity_keys = None
+    comp_func = lambda device: device["value"]["name"] == params["create_spec"].get("name")
+{% elif list_index %}
+    {% set haz_lookup = 1 %}
+    {% set haz_lookup_with_filters = 1 %}
+    lookup_url = per_id_url = build_url(params)
+    uniquity_keys = ["{{list_index}}"]
+    comp_func = None
+
+    async def lookup_with_filters(params, session, url):
+        # e.g: for the datacenter resources
+        if not "folder" in params:
+            return
+        if not "name" in params:
+            return
+        async with session.get(f"{url}?names={params['name']}&folders={params['folder']}") as resp:
+            _json = await resp.json()
+            if isinstance(_json, list) and len(_json) == 1:
+                return await get_device_info(session, url, _json[0]["{{list_index}}"])
+{% else %}
+    uniquity_keys = []
 {% endif %}
 
+{% if haz_lookup is defined %}
+    _json = None
+    {% if list_index %}
     if params["{{list_index}}"]:
         _json = await get_device_info(session, build_url(params), params["{{list_index}}"])
-    else:
-        _json = await exists(params, session, build_url(params), unicity_keys)
+    {% endif %}
+    if not _json and (uniquity_keys or comp_func):
+        _json = await exists(params, session, url=lookup_url, uniquity_keys=uniquity_keys, per_id_url=per_id_url, comp_func=comp_func)
+    {% if haz_lookup_with_filters is defined %}
     if not _json:
         _json = await lookup_with_filters(params, session, build_url(params))
+    {% endif %}
 
     if _json:
         if "value" not in _json:  # 7.0.2+
@@ -81,10 +112,24 @@ async def _create(params, session):
         if "_update" in globals():
             params["{{list_index}}"] = _json["id"]
             return (await globals()["_update"](params, session))
+
+
+	{% if name == "vcenter_vmtemplate_libraryitems" %}
+        extra_info_url = "https://{vcenter_hostname}/api/vcenter/vm-template/library-items/{id}".format(
+            **params,
+            id=_json["id"]
+        )
+        async with session.get(extra_info_url) as resp:
+            if resp.status == 200:
+                extra_json = await resp.json()
+                for k, v in extra_json.items():
+                    _json["value"][k] = v
+	{% endif %}
+
         return (await update_changed_flag(_json, 200, 'get'))
 {% endif %}
 
-    payload = prepare_payload(params, PAYLOAD_FORMAT["create"])
+    payload = prepare_payload(params, PAYLOAD_FORMAT["{{ operation }}"])
     _url = (
         "https://{vcenter_hostname}"
         "{{ _path }}").format(**params)
@@ -109,7 +154,7 @@ async def _create(params, session):
             if _json_device_info:
                _json = _json_device_info
 
-        return await update_changed_flag(_json, resp.status, "create")
+        return await update_changed_flag(_json, resp.status, "{{ operation }}")
 
 
 {% elif operation == "update" -%}
