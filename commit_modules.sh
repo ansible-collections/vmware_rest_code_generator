@@ -12,14 +12,10 @@ mkdir -p logs
 (
     rm -rf manual/source/vmware_rest_scenarios/task_outputs
     mkdir -p manual/source/vmware_rest_scenarios/task_outputs
-    cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/vcenter_vm_scenario1
-    ./refresh_RETURN_block.sh
-    cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/vcenter_vm_customize
-    ./refresh_RETURN_block.sh
-    cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/vcenter_library_and_ovf_clone
-    ./refresh_RETURN_block.sh
-     cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/appliance
-    ./refresh_RETURN_block.sh
+    for t in vcenter_vm_scenario1 vcenter_vm_customize vcenter_library_and_ovf_clone vcenter_vm_cloning vcenter_vm_clone_on_library appliance; do
+        cd ~/.ansible/collections/ansible_collections/vmware/vmware_rest/tests/integration/targets/${t}
+        ./refresh_RETURN_block.sh
+    done
 )
 (
     cd ~/.ansible/collections/ansible_collections/goneri/utils
