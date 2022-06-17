@@ -71,7 +71,8 @@ async def _{{ operation }}(params, session):
     lookup_url = f"https://{params['vcenter_hostname']}/api/content/library/item?library_id={library_id}"
     per_id_url = "https://{vcenter_hostname}/api/content/library/item".format(**params)
     uniquity_keys = None
-    comp_func = lambda device: device["value"]["name"] == params["create_spec"].get("name")
+    def comp_func(device):
+        return device["value"]["name"] == params["create_spec"].get("name")
 {% elif list_index %}
     {% set haz_lookup = 1 %}
     {% set haz_lookup_with_filters = 1 %}
@@ -81,9 +82,9 @@ async def _{{ operation }}(params, session):
 
     async def lookup_with_filters(params, session, url):
         # e.g: for the datacenter resources
-        if not "folder" in params:
+        if "folder" not in params:
             return
-        if not "name" in params:
+        if "name" not in params:
             return
         async with session.get(f"{url}?names={params['name']}&folders={params['folder']}") as resp:
             _json = await resp.json()
