@@ -1191,6 +1191,15 @@ def main():
                     if f == "plugins/module_utils/vmware_rest.py":
                         if test.startswith("validate-modules:"):
                             continue
+                if version in ["2.12"]:
+                    if f.startswith("plugins/lookup") and (
+                        test.startswith("compile-")
+                        or test.startswith("import-")
+                        or test.startswith("metaclass-boilerplate")
+                        or test.startswith("future-import-boilerplate")
+                    ):
+                        continue
+
                 per_version_ignore_content += f"{f} {test}\n"
 
         ignore_file = ignore_dir / f"ignore-{version}.txt"
