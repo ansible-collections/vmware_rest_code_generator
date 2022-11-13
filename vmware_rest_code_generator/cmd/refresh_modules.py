@@ -251,7 +251,7 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
         },
         "requirements": ["vSphere 7.0.2 or greater", "python >= 3.6", "aiohttp"],
         "short_description": short_description,
-        "version_added": added_ins["module"] or next_version,
+        "version_added": next_version,
     }
 
     # Note: this series of if block is overcomplicated and should
@@ -310,9 +310,7 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
             option["default"] = parameter.get("default")
 
         documentation["options"][normalized_name] = option
-        parameter["added_in"] = (
-            added_ins["parameters"].get(normalized_name) or next_version
-        )
+        parameter["added_in"] = next_version
 
     raw_content = pkg_resources.resource_string(
         "vmware_rest_code_generator", "config/modules.yaml"
@@ -848,7 +846,7 @@ class AnsibleModuleBase:
 
     def renderer(self, target_dir, next_version):
 
-        added_ins = get_module_added_ins(self.name, git_dir=target_dir / ".git")
+        added_ins = {}  # get_module_added_ins(self.name, git_dir=target_dir / ".git")
         arguments = gen_arguments_py(self.parameters(), self.list_index())
         documentation = format_documentation(
             gen_documentation(
@@ -1135,74 +1133,6 @@ def main():
                     target_dir=args.target_dir, next_version=args.next_version
                 )
                 module_list.append(module.name)
-
-    files = [f"plugins/modules/{module}.py" for module in module_list]
-    files += [
-        "plugins/module_utils/vmware_rest.py",
-        "plugins/lookup/cluster_moid.py",
-        "plugins/lookup/datacenter_moid.py",
-        "plugins/lookup/datastore_moid.py",
-        "plugins/lookup/folder_moid.py",
-        "plugins/lookup/host_moid.py",
-        "plugins/lookup/network_moid.py",
-        "plugins/lookup/resource_pool_moid.py",
-        "plugins/lookup/vm_moid.py",
-    ]
-    ignore_dir = args.target_dir / "tests" / "sanity"
-    ignore_dir.mkdir(parents=True, exist_ok=True)
-    ignore_content = (
-        "plugins/modules/vcenter_vm_guest_customization.py pep8!skip\n"  # E501: line too long (189 > 160 characters)
-        "plugins/modules/appliance_infraprofile_configs.py pep8!skip\n"  # E501: line too long (302 > 160 characters)
-    )
-
-    for version in ["2.9", "2.10", "2.11", "2.12", "2.13"]:
-        skip_list = [
-            "compile-2.7!skip",  # Py3.6+
-            "compile-3.5!skip",  # Py3.6+
-            "import-2.7!skip",  # Py3.6+
-            "import-3.5!skip",  # Py3.6+
-            "future-import-boilerplate!skip",  # Py2 only
-            "metaclass-boilerplate!skip",  # Py2 only
-        ]
-        # No py26 tests with 2.13 and greater
-        if version in ["2.9", "2.10", "2.11", "2.12"]:
-            skip_list += [
-                "compile-2.6!skip",  # Py3.6+
-                "import-2.6!skip",  # Py3.6+
-            ]
-        if version in ["2.9", "2.10", "2.11"]:
-            skip_list += [
-                "validate-modules:missing-if-name-main",
-                "validate-modules:missing-main-call",  # there is an async main()
-            ]
-        elif version in ["2.12", "2.13"]:
-            # https://docs.python.org/3.10/library/asyncio-eventloop.html#asyncio.get_event_loop
-            # with py3.10, get_event_loop() raises a deprecation warning. We will switch to asyncio.run()
-            # when we will drop py3.6 support.
-            skip_list += [
-                "import-3.10!skip",
-            ]
-
-        per_version_ignore_content = ignore_content
-        for f in files:
-            for test in skip_list:
-                # Sanity test 'validate-modules' does not test path 'plugins/module_utils/vmware_rest.py'
-                if version in ["2.9", "2.10", "2.11"]:
-                    if f == "plugins/module_utils/vmware_rest.py":
-                        if test.startswith("validate-modules:"):
-                            continue
-                if f.startswith("plugins/lookup") and (
-                    test.startswith("compile-")
-                    or test.startswith("import-")
-                    or test.startswith("metaclass-boilerplate")
-                    or test.startswith("future-import-boilerplate")
-                ):
-                    continue
-
-                per_version_ignore_content += f"{f} {test}\n"
-
-        ignore_file = ignore_dir / f"ignore-{version}.txt"
-        ignore_file.write_text(per_version_ignore_content)
 
     info = VersionInfo("vmware_rest_code_generator")
     dev_md = args.target_dir / "dev.md"
