@@ -23,10 +23,6 @@ mkdir -p logs
 )
 tox -e black
 tox -e add_docs
-
-# See: https://github.com/ansible-network/collection_prep/pull/66
-git checkout -- docs/docsite/
-
 tox -e build_manual
 
 find docs/docsite/rst/ -name '*.rst' -exec sed -i 's,’,",g' '{}' \;
