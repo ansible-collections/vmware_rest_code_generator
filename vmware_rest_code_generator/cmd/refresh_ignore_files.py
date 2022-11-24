@@ -171,6 +171,20 @@ def refresh_ignore_files(target_dir):
         for m in module_utils_directory.glob("*.py"):
             pass
 
+    with ignore_file("2.15").open("w") as f:
+        f.write(
+            "plugins/modules/vcenter_vm_guest_customization.py pep8!skip\n"
+        )  # E501: line too long (189 > 160 characters)
+        f.write(
+            "plugins/modules/appliance_infraprofile_configs.py pep8!skip\n"
+        )  # E501: line too long (302 > 160 characters)
+        for m in module_directory.glob("*.py"):
+            pass
+        for m in lookup_directory.glob("*.py"):
+            pass
+        for m in module_utils_directory.glob("*.py"):
+            pass
+
 
 def main():
     parser = argparse.ArgumentParser(
