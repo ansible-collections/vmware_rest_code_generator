@@ -856,6 +856,7 @@ class AnsibleModuleBase:
 
         content = jinja2_renderer(
             self.template_file,
+            "vmware_rest_code_generator",
             arguments=_indent(arguments, 4),
             documentation=documentation,
             list_index=self.list_index(),
