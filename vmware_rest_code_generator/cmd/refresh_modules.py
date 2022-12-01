@@ -17,12 +17,7 @@ import redbaron
 import yaml
 from functools import lru_cache
 
-
-def jinja2_renderer(template_file, **kwargs):
-    templateLoader = jinja2.PackageLoader("vmware_rest_code_generator")
-    templateEnv = jinja2.Environment(loader=templateLoader)
-    template = templateEnv.get_template(template_file)
-    return template.render(kwargs)
+from gouttelette.utils import jinja2_renderer
 
 
 def normalize_parameter_name(name):
