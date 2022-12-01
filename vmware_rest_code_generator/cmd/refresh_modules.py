@@ -16,6 +16,9 @@ import baron
 import redbaron
 import yaml
 from functools import lru_cache
+from gouttelette.utils import (
+    format_documentation,
+)
 
 from gouttelette.utils import jinja2_renderer
 
@@ -315,42 +318,6 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
         for k, v in module_from_config["documentation"].items():
             documentation[k] = v
     return documentation
-
-
-def format_documentation(documentation):
-    def _sanitize(input):
-        if isinstance(input, str):
-            return input.replace("':'", ":")
-        if isinstance(input, list):
-            return [l.replace("':'", ":") for l in input]
-        if isinstance(input, dict):
-            return {k: _sanitize(v) for k, v in input.items()}
-        if isinstance(input, bool):
-            return input
-        raise TypeError
-
-    keys = [
-        "module",
-        "short_description",
-        "description",
-        "options",
-        "author",
-        "version_added",
-        "requirements",
-        "seealso",
-        "notes",
-    ]
-    final = "r'''\n"
-    for i in keys:
-        if i not in documentation:
-            continue
-        if isinstance(documentation[i], str):
-            sanitized = _sanitize(documentation[i])
-        else:
-            sanitized = documentation[i]
-        final += yaml.dump({i: sanitized}, indent=2)
-    final += "'''"
-    return final
 
 
 def path_to_name(path):
