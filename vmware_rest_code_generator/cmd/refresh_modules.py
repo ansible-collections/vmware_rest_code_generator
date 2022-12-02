@@ -18,6 +18,10 @@ import yaml
 from functools import lru_cache
 from gouttelette.utils import (
     format_documentation,
+    indent,
+    get_module_from_config,
+    python_type,
+    UtilsBase,
 )
 
 from gouttelette.utils import jinja2_renderer
@@ -175,17 +179,6 @@ class Description:
             ).rstrip()
 
 
-def python_type(value):
-    TYPE_MAPPING = {
-        "array": "list",
-        "boolean": "bool",
-        "integer": "int",
-        "object": "dict",
-        "string": "str",
-    }
-    return TYPE_MAPPING.get(value, value)
-
-
 def gen_documentation(name, description, parameters, added_ins, next_version):
 
     short_description = description.split(". ")[0]
@@ -313,7 +306,7 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
     raw_content = pkg_resources.resource_string(
         "vmware_rest_code_generator", "config/modules.yaml"
     )
-    module_from_config = get_module_from_config(name)
+    module_from_config = get_module_from_config(name, "vmware_rest_code_generator")
     if module_from_config and "documentation" in module_from_config:
         for k, v in module_from_config["documentation"].items():
             documentation[k] = v
@@ -402,15 +395,6 @@ def gen_arguments_py(parameters, list_index=None):
     return result
 
 
-def _indent(text_block, indent=0):
-    result = ""
-    for l in text_block.split("\n"):
-        result += " " * indent
-        result += l
-        result += "\n"
-    return result
-
-
 def flatten_ref(tree, definitions):
     if isinstance(tree, str):
         if tree.startswith("#/definitions/"):
@@ -440,16 +424,6 @@ def flatten_ref(tree, definitions):
     return tree
 
 
-def get_module_from_config(module):
-    raw_content = pkg_resources.resource_string(
-        "vmware_rest_code_generator", "config/modules.yaml"
-    )
-    for i in yaml.safe_load(raw_content):
-        if module in i:
-            return i[module]
-    return False
-
-
 class Resource:
     def __init__(self, name):
         self.name = name
@@ -457,8 +431,10 @@ class Resource:
         self.summary = {}
 
 
-class AnsibleModuleBase:
+class AnsibleModuleBase(UtilsBase):
+
     def __init__(self, resource, definitions):
+        super(AnsibleModuleBase, self).__init__()
         self.resource = resource
         self.definitions = definitions
         self.name = resource.name
@@ -481,12 +457,6 @@ class AnsibleModuleBase:
 
     def get_path(self):
         return list(self.resource.operations.values())[0][1]
-
-    def is_trusted(self):
-        if get_module_from_config(self.name) is False:
-            print(f"- do not build: {self.name}")
-        else:
-            return True
 
     def list_index(self):
         for i in ["get", "update", "delete"]:
@@ -800,12 +770,6 @@ class AnsibleModuleBase:
 
         return list_path
 
-    def write_module(self, target_dir, content):
-        module_dir = target_dir / "plugins" / "modules"
-        module_dir.mkdir(parents=True, exist_ok=True)
-        module_py_file = module_dir / "{name}.py".format(name=self.name)
-        module_py_file.write_text(content)
-
     def renderer(self, target_dir, next_version):
 
         added_ins = {}  # get_module_added_ins(self.name, git_dir=target_dir / ".git")
@@ -1074,7 +1038,7 @@ def main():
                 module = AnsibleInfoListOnlyModule(
                     resource, definitions=swagger_file.definitions
                 )
-                if module.is_trusted() and len(module.default_operationIds) > 0:
+                if module.is_trusted("vmware_rest_code_generator") and len(module.default_operationIds) > 0:
                     module.renderer(
                         target_dir=args.target_dir, next_version=args.next_version
                     )
@@ -1083,7 +1047,7 @@ def main():
                 module = AnsibleInfoNoListModule(
                     resource, definitions=swagger_file.definitions
                 )
-                if module.is_trusted() and len(module.default_operationIds) > 0:
+                if module.is_trusted("vmware_rest_code_generator") and len(module.default_operationIds) > 0:
                     module.renderer(
                         target_dir=args.target_dir, next_version=args.next_version
                     )
@@ -1091,7 +1055,7 @@ def main():
 
             module = AnsibleModule(resource, definitions=swagger_file.definitions)
 
-            if module.is_trusted() and len(module.default_operationIds) > 0:
+            if module.is_trusted("vmware_rest_code_generator") and len(module.default_operationIds) > 0:
                 module.renderer(
                     target_dir=args.target_dir, next_version=args.next_version
                 )
