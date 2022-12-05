@@ -432,7 +432,6 @@ class Resource:
 
 
 class AnsibleModuleBase(UtilsBase):
-
     def __init__(self, resource, definitions):
         super(AnsibleModuleBase, self).__init__()
         self.resource = resource
@@ -1038,7 +1037,10 @@ def main():
                 module = AnsibleInfoListOnlyModule(
                     resource, definitions=swagger_file.definitions
                 )
-                if module.is_trusted("vmware_rest_code_generator") and len(module.default_operationIds) > 0:
+                if (
+                    module.is_trusted("vmware_rest_code_generator")
+                    and len(module.default_operationIds) > 0
+                ):
                     module.renderer(
                         target_dir=args.target_dir, next_version=args.next_version
                     )
@@ -1047,7 +1049,10 @@ def main():
                 module = AnsibleInfoNoListModule(
                     resource, definitions=swagger_file.definitions
                 )
-                if module.is_trusted("vmware_rest_code_generator") and len(module.default_operationIds) > 0:
+                if (
+                    module.is_trusted("vmware_rest_code_generator")
+                    and len(module.default_operationIds) > 0
+                ):
                     module.renderer(
                         target_dir=args.target_dir, next_version=args.next_version
                     )
@@ -1055,7 +1060,10 @@ def main():
 
             module = AnsibleModule(resource, definitions=swagger_file.definitions)
 
-            if module.is_trusted("vmware_rest_code_generator") and len(module.default_operationIds) > 0:
+            if (
+                module.is_trusted("vmware_rest_code_generator")
+                and len(module.default_operationIds) > 0
+            ):
                 module.renderer(
                     target_dir=args.target_dir, next_version=args.next_version
                 )
