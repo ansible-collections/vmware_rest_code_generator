@@ -22,9 +22,8 @@ from gouttelette.utils import (
     get_module_from_config,
     python_type,
     UtilsBase,
+    jinja2_renderer,
 )
-
-from gouttelette.utils import jinja2_renderer
 
 
 def normalize_parameter_name(name):
@@ -433,7 +432,6 @@ class Resource:
 
 class AnsibleModuleBase(UtilsBase):
     def __init__(self, resource, definitions):
-        super(AnsibleModuleBase, self).__init__()
         self.resource = resource
         self.definitions = definitions
         self.name = resource.name
@@ -787,7 +785,7 @@ class AnsibleModuleBase(UtilsBase):
         content = jinja2_renderer(
             self.template_file,
             "vmware_rest_code_generator",
-            arguments=_indent(arguments, 4),
+            arguments=indent(arguments, 4),
             documentation=documentation,
             list_index=self.list_index(),
             list_path=self.list_path(),
