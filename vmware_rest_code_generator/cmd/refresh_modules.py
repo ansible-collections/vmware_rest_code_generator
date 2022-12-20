@@ -302,9 +302,6 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
         documentation["options"][normalized_name] = option
         parameter["added_in"] = next_version
 
-    raw_content = pkg_resources.resource_string(
-        "vmware_rest_code_generator", "config/modules.yaml"
-    )
     module_from_config = get_module_from_config(name, "vmware_rest_code_generator")
     if module_from_config and "documentation" in module_from_config:
         for k, v in module_from_config["documentation"].items():

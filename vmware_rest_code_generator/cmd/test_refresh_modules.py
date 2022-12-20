@@ -2,6 +2,9 @@ import ast
 import pytest
 import types
 
+from unittest.mock import patch
+
+
 import vmware_rest_code_generator.cmd.refresh_modules as rm
 
 my_parameters = [
@@ -363,8 +366,9 @@ def test_path_to_name():
     )
 
 
-def test_gen_documentation():
-
+@patch("vmware_rest_code_generator.cmd.refresh_modules.get_module_from_config")
+def test_gen_documentation(m_get_module_from_config):
+    m_get_module_from_config.return_value = {}
     added_ins = {"parameters": {}, "module": None}
     a = rm.gen_documentation("foo", "bar", my_parameters, added_ins, "1.2.3")
     assert a["options"]["vcenter_password"]
@@ -382,38 +386,39 @@ module: foo
 short_description: bar
 description: bar
 options:
-  aaa:
-    description:
-    - a second parameter. the field must contain the id of resources returned by M(vcenter_vm_hardware_disk).
-    - 'Valid attributes are:'
-    - ' - C(a_subkey) (ccc): more blabla'
-    required: true
-    type: int
-  ccc:
-    choices:
-    - a
-    - b
-    - c
-    description:
-    - 3rd parameter is ':' enum,
-    - ''
-    - and this string is long and comes with a ' on purpose. This way, we can use
-      it to ensure format_documentation() can break it up.
-    type: str
-  vcenter_hostname:
-    description:
-    - The hostname or IP address of the vSphere vCenter
-    - If the value is not specified in the task, the value of environment variable
-      C(VMWARE_HOST) will be used instead.
-    required: true
-    type: str
-  vcenter_password:
-    description:
-    - The vSphere vCenter password
-    - If the value is not specified in the task, the value of environment variable
-      C(VMWARE_PASSWORD) will be used instead.
-    required: true
-    type: str
+    aaa:
+        description:
+        - a second parameter. the field must contain the id of resources returned
+            by M(vcenter_vm_hardware_disk).
+        - 'Valid attributes are:'
+        - ' - C(a_subkey) (ccc): more blabla'
+        required: true
+        type: int
+    ccc:
+        choices:
+        - a
+        - b
+        - c
+        description:
+        - 3rd parameter is ':' enum,
+        - ''
+        - and this string is long and comes with a ' on purpose. This way, we can
+            use it to ensure format_documentation() can break it up.
+        type: str
+    vcenter_hostname:
+        description:
+        - The hostname or IP address of the vSphere vCenter
+        - If the value is not specified in the task, the value of environment variable
+            C(VMWARE_HOST) will be used instead.
+        required: true
+        type: str
+    vcenter_password:
+        description:
+        - The vSphere vCenter password
+        - If the value is not specified in the task, the value of environment variable
+            C(VMWARE_PASSWORD) will be used instead.
+        required: true
+        type: str
 author:
 - Goneri Le Bouder (@goneri) <goneri@lebouder.net>
 version_added: 1.0.0
@@ -561,16 +566,6 @@ def test_AnsibleModuleBase():
     definitions = rm.Definitions(my_definitions)
     module = rm.AnsibleModuleBase(resources["vcenter_vm"], definitions)
     assert module.name == "vcenter_vm"
-
-
-def test_filter_out_trusted_module():
-    paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
-    resources = rm.SwaggerFile.init_resources(paths.values())
-    definitions = rm.Definitions(my_definitions)
-    module = rm.AnsibleModuleBase(resources["vcenter_vm"], definitions)
-    assert module.is_trusted()
-    module.name = "something_we_dont_trust"
-    assert not module.is_trusted()
 
 
 # AnsibleInfoModule
