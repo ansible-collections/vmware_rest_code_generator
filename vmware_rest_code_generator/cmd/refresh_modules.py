@@ -309,7 +309,7 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
     return documentation
 
 
-def path_to_name(path):
+def path_to_name(path: str):
     _path = path.lstrip("/").split("?")[0]
     elements = []
     keys = []
@@ -335,11 +335,7 @@ def path_to_name(path):
         "resize",
     ):
         elements = elements[:-1]
-    if elements[0:3] == ["rest", "com", "vmware"]:
-        elements = elements[3:]
-    elif elements[0:2] == ["rest", "hvc"]:
-        elements = elements[1:]
-    elif elements[0:2] == ["rest", "appliance"]:
+    if elements[0:2] == ["rest", "appliance"]:
         elements = elements[1:]
     elif elements[0:2] == ["rest", "vcenter"]:
         elements = elements[1:]
