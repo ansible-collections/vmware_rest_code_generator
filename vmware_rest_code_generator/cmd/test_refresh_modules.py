@@ -766,3 +766,53 @@ def test_AnsibleModule_parameters_complex():
             "type": "string",
         },
     ]
+
+
+@pytest.mark.parametrize(
+    "path,name",
+    [
+        ("/api/vcenter/authentication/token", "vcenter_authentication_token"),
+        (
+            "/api/vcenter/certificate-management/vcenter/signing-certificate",
+            "vcenter_certificatemanagement_vcenter_signingcertificate",
+        ),
+        (
+            "/api/vcenter/certificate-management/vcenter/signing-certificate?action=refresh",
+            "vcenter_certificatemanagement_vcenter_signingcertificate",
+        ),
+        ("/api/vcenter/compute/policies", "vcenter_compute_policies"),
+        (
+            "/api/vcenter/compute/policies/capabilities",
+            "vcenter_compute_policies_capabilities",
+        ),
+        (
+            "/api/vcenter/compute/policies/capabilities/{capability}",
+            "vcenter_compute_policies_capabilities",
+        ),
+        (
+            "/rest/vcenter/vm/{vm}/hardware/serial/{port}/disconnect",
+            "vcenter_vm_hardware_serial",
+        ),
+        ("/rest/vcenter/vm/{vm}/library-item", "vcenter_vm_libraryitem"),
+        ("/rest/vcenter/vm/{vm}/power", "vcenter_vm_power"),
+        ("/rest/vcenter/vm/{vm}/power/reset", "vcenter_vm_power"),
+        ("/rest/vcenter/vm/{vm}/power/start", "vcenter_vm_power"),
+        ("/rest/vcenter/vm?action=instant-clone", "vcenter_vm"),
+        ("/rest/vcenter/vm?action=register", "vcenter_vm"),
+        ("/rest/appliance/system/version", "appliance_system_version"),
+        ("/rest/appliance/timesync", "appliance_timesync"),
+        ("/rest/appliance/update", "appliance_update"),
+        ("/rest/appliance/update/pending", "appliance_update_pending"),
+        ("/rest/appliance/update/pending/{version}", "appliance_update_pending"),
+        (
+            "/rest/appliance/update/pending/{version}?action=install",
+            "appliance_update_pending",
+        ),
+        (
+            "/rest/appliance/update/pending/{version}?action=precheck",
+            "appliance_update_pending",
+        ),
+    ],
+)
+def test_path_to_name(path, name):
+    assert rm.path_to_name(path) == name
