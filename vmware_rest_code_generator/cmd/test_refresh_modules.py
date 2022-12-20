@@ -93,231 +93,233 @@ documentation_data_input = {
     "version_added": "1.0.0",
 }
 
-my_raw_paths_data = {
-    "/rest/vcenter/vm/{vm}": {
-        "get": {
-            "operationId": "get",
-            "parameters": [
-                {
-                    "description": "Id of the VM",
-                    "in": "path",
-                    "name": "vm",
-                    "required": True,
-                    "type": "string",
-                }
-            ],
-            "summary": "",
-            "responses": {
-                "200": {
-                    "description": "Information about the VM.",
-                    "schema": {"$ref": "#/definitions/vcenter.VM_resp"},
-                },
-                "400": {
-                    "description": "things went bad.",
-                    "schema": {
-                        "$ref": "#/definitions/vapi.std.errors.resource_inaccessible_error"
+my_short_sample = {
+    "paths": {
+        "/rest/vcenter/vm/{vm}": {
+            "get": {
+                "operationId": "get",
+                "parameters": [
+                    {
+                        "description": "Id of the VM",
+                        "in": "path",
+                        "name": "vm",
+                        "required": True,
+                        "type": "string",
+                    }
+                ],
+                "summary": "",
+                "responses": {
+                    "200": {
+                        "description": "Information about the VM.",
+                        "schema": {"$ref": "#/definitions/vcenter.VM_resp"},
+                    },
+                    "400": {
+                        "description": "things went bad.",
+                        "schema": {
+                            "$ref": "#/definitions/vapi.std.errors.resource_inaccessible_error"
+                        },
                     },
                 },
-            },
-        }
+            }
+        },
+        "/rest/vcenter/vm": {
+            "get": {
+                "operationId": "list",
+                "parameters": [
+                    {
+                        "collectionFormat": "multi",
+                        "description": "desc of multi",
+                        "in": "query",
+                        "items": {"type": "string"},
+                        "name": "filter.vms",
+                        "type": "array",
+                    }
+                ],
+                "summary": "",
+                "responses": {
+                    "200": {
+                        "description": "A list",
+                        "schema": {"$ref": "#/definitions/vcenter.VM.list_resp"},
+                    },
+                    "400": {
+                        "description": "my 400 error",
+                        "schema": {
+                            "$ref": "#/definitions/vapi.std.errors.unable_to_allocate_resource_error"
+                        },
+                    },
+                },
+            }
+        },
+    }
+}
+
+
+my_bigger_sample = {
+    "paths": {
+        "/rest/vcenter/vm-template/library-items/{template_library_item}/check-outs": {
+            "post": {
+                "summary": "post a library item",
+                "consumes": ["application/json"],
+                "operationId": "check_out",
+                "parameters": [
+                    {
+                        "description": "Identifier of the content library item containing the source virtual machine template to be checked out.",
+                        "in": "path",
+                        "name": "template_library_item",
+                        "required": True,
+                        "type": "string",
+                    },
+                    {
+                        "in": "body",
+                        "name": "request_body",
+                        "schema": {
+                            "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs_check_out"
+                        },
+                    },
+                    {
+                        "description": "action=check-out",
+                        "enum": ["check-out"],
+                        "in": "query",
+                        "name": "action",
+                        "required": True,
+                        "type": "string",
+                    },
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Identifier of the virtual machine that was checked out of the library item.",
+                        "schema": {
+                            "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs.check_out_resp"
+                        },
+                    }
+                },
+            }
+        },
+        "/rest/vcenter/vm-template/library-items/{template_library_item}/check-outs/{vm}": {
+            "post": {
+                "summary": "post a VM in the library",
+                "consumes": ["application/json"],
+                "operationId": "check_in",
+                "parameters": [
+                    {
+                        "description": "Identifier of the content library item in which the virtual machine is checked in.",
+                        "in": "path",
+                        "name": "template_library_item",
+                        "required": True,
+                        "type": "string",
+                    },
+                    {
+                        "description": "Identifier of the virtual machine to check into the library item.",
+                        "in": "path",
+                        "name": "vm",
+                        "required": True,
+                        "type": "string",
+                    },
+                    {
+                        "in": "body",
+                        "name": "request_body",
+                        "schema": {
+                            "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs_check_in"
+                        },
+                    },
+                    {
+                        "description": "action=check-in",
+                        "enum": ["check-in"],
+                        "in": "query",
+                        "name": "action",
+                        "required": True,
+                        "type": "string",
+                    },
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The new version of the library item.",
+                        "schema": {
+                            "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs.check_in_resp"
+                        },
+                    }
+                },
+            }
+        },
     },
-    "/rest/vcenter/vm": {
-        "get": {
-            "operationId": "list",
-            "parameters": [
-                {
-                    "collectionFormat": "multi",
-                    "description": "desc of multi",
-                    "in": "query",
-                    "items": {"type": "string"},
-                    "name": "filter.vms",
+    "definitions": {
+        "vcenter.VM.list_resp": {
+            "properties": {
+                "value": {
+                    "items": {"$ref": "#/definitions/vcenter.VM.summary"},
                     "type": "array",
                 }
-            ],
-            "summary": "",
-            "responses": {
-                "200": {
-                    "description": "A list",
-                    "schema": {"$ref": "#/definitions/vcenter.VM.list_resp"},
-                },
-                "400": {
-                    "description": "my 400 error",
-                    "schema": {
-                        "$ref": "#/definitions/vapi.std.errors.unable_to_allocate_resource_error"
-                    },
-                },
             },
-        }
-    },
-}
-
-
-my_raw_paths_data_with_param_in_path = {
-    "/rest/vcenter/vm-template/library-items/{template_library_item}/check-outs": {
-        "post": {
-            "consumes": ["application/json"],
-            "operationId": "check_out",
-            "parameters": [
-                {
-                    "description": "Identifier of the content library item containing the source virtual machine template to be checked out.",
-                    "in": "path",
-                    "name": "template_library_item",
-                    "required": True,
-                    "type": "string",
-                },
-                {
-                    "in": "body",
-                    "name": "request_body",
-                    "schema": {
-                        "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs_check_out"
-                    },
-                },
-                {
-                    "description": "action=check-out",
-                    "enum": ["check-out"],
-                    "in": "query",
-                    "name": "action",
-                    "required": True,
-                    "type": "string",
-                },
-            ],
-            "summary": "",
-            "responses": {
-                "200": {
-                    "description": "Identifier of the virtual machine that was checked out of the library item.",
-                    "schema": {
-                        "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs.check_out_resp"
-                    },
+            "required": ["value"],
+            "type": "object",
+        },
+        # vm_template related definitions
+        "vcenter.vm_template.library_items.check_outs_check_in": {
+            "properties": {
+                "spec": {
+                    "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs.check_in_spec",
+                    "description": "Specification used to check in the virtual machine into the library item.",
                 }
             },
-        }
-    },
-    "/rest/vcenter/vm-template/library-items/{template_library_item}/check-outs/{vm}": {
-        "post": {
-            "consumes": ["application/json"],
-            "operationId": "check_in",
-            "parameters": [
-                {
-                    "description": "Identifier of the content library item in which the virtual machine is checked in.",
-                    "in": "path",
-                    "name": "template_library_item",
-                    "required": True,
+            "type": "object",
+        },
+        "vcenter.vm_template.library_items.check_outs_check_out": {
+            "properties": {
+                "spec": {
+                    "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs.check_out_spec",
+                    "description": "Specification used to check out the source virtual machine template as a virtual machine.",
+                }
+            },
+            "type": "object",
+        },
+        "vcenter.vm_template.library_items.check_outs.check_out_spec": {
+            "properties": {
+                "name": {
+                    "description": "Name of the virtual machine to check out of the library item.",
                     "type": "string",
                 },
-                {
-                    "description": "Identifier of the virtual machine to check into the library item.",
-                    "in": "path",
-                    "name": "vm",
-                    "required": True,
+                "placement": {
+                    "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs.placement_spec",
+                    "description": "Information used to place the checked out virtual machine.",
+                },
+                "powered_on": {
+                    "description": "Specifies whether the virtual machine should be powered on after check out.",
+                    "type": "boolean",
+                },
+            },
+            "type": "object",
+        },
+        "vcenter.vm_template.library_items.check_outs.placement_spec": {
+            "properties": {
+                "cluster": {
+                    "description": "Cluster onto which the virtual machine should be placed. If {@name #cluster} and {@name #resourcePool} are both specified, {@name #resourcePool} must belong to {@name #cluster}. If {@name #cluster} and {@name #host} are both specified, {@name #host} must be a member of {@name #cluster}.",
                     "type": "string",
                 },
-                {
-                    "in": "body",
-                    "name": "request_body",
-                    "schema": {
-                        "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs_check_in"
-                    },
-                },
-                {
-                    "description": "action=check-in",
-                    "enum": ["check-in"],
-                    "in": "query",
-                    "name": "action",
-                    "required": True,
+                "folder": {
+                    "description": "Virtual machine folder into which the virtual machine should be placed.",
                     "type": "string",
                 },
-            ],
-            "summary": "",
-            "responses": {
-                "200": {
-                    "description": "The new version of the library item.",
-                    "schema": {
-                        "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs.check_in_resp"
-                    },
+                "host": {
+                    "description": "Host onto which the virtual machine should be placed. If {@name #host} and {@name #resourcePool} are both specified, {@name #resourcePool} must belong to {@name #host}. If {@name #host} and {@name #cluster} are both specified, {@name #host} must be a member of {@name #cluster}.",
+                    "type": "string",
+                },
+                "resource_pool": {
+                    "description": "Resource pool into which the virtual machine should be placed.",
+                    "type": "string",
                 },
             },
-        }
-    },
-}
-
-
-my_definitions = {
-    "vcenter.VM.list_resp": {
-        "properties": {
-            "value": {
-                "items": {"$ref": "#/definitions/vcenter.VM.summary"},
-                "type": "array",
-            }
+            "type": "object",
         },
-        "required": ["value"],
-        "type": "object",
-    },
-    # vm_template related definitions
-    "vcenter.vm_template.library_items.check_outs_check_in": {
-        "properties": {
-            "spec": {
-                "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs.check_in_spec",
-                "description": "Specification used to check in the virtual machine into the library item.",
-            }
+        "vcenter.vm_template.library_items.check_outs.check_in_spec": {
+            "properties": {
+                "message": {
+                    "description": "Message describing the changes made to the virtual machine.",
+                    "type": "string",
+                }
+            },
+            "required": ["message"],
+            "type": "object",
         },
-        "type": "object",
-    },
-    "vcenter.vm_template.library_items.check_outs_check_out": {
-        "properties": {
-            "spec": {
-                "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs.check_out_spec",
-                "description": "Specification used to check out the source virtual machine template as a virtual machine.",
-            }
-        },
-        "type": "object",
-    },
-    "vcenter.vm_template.library_items.check_outs.check_out_spec": {
-        "properties": {
-            "name": {
-                "description": "Name of the virtual machine to check out of the library item.",
-                "type": "string",
-            },
-            "placement": {
-                "$ref": "#/definitions/vcenter.vm_template.library_items.check_outs.placement_spec",
-                "description": "Information used to place the checked out virtual machine.",
-            },
-            "powered_on": {
-                "description": "Specifies whether the virtual machine should be powered on after check out.",
-                "type": "boolean",
-            },
-        },
-        "type": "object",
-    },
-    "vcenter.vm_template.library_items.check_outs.placement_spec": {
-        "properties": {
-            "cluster": {
-                "description": "Cluster onto which the virtual machine should be placed. If {@name #cluster} and {@name #resourcePool} are both specified, {@name #resourcePool} must belong to {@name #cluster}. If {@name #cluster} and {@name #host} are both specified, {@name #host} must be a member of {@name #cluster}.",
-                "type": "string",
-            },
-            "folder": {
-                "description": "Virtual machine folder into which the virtual machine should be placed.",
-                "type": "string",
-            },
-            "host": {
-                "description": "Host onto which the virtual machine should be placed. If {@name #host} and {@name #resourcePool} are both specified, {@name #resourcePool} must belong to {@name #host}. If {@name #host} and {@name #cluster} are both specified, {@name #host} must be a member of {@name #cluster}.",
-                "type": "string",
-            },
-            "resource_pool": {
-                "description": "Resource pool into which the virtual machine should be placed.",
-                "type": "string",
-            },
-        },
-        "type": "object",
-    },
-    "vcenter.vm_template.library_items.check_outs.check_in_spec": {
-        "properties": {
-            "message": {
-                "description": "Message describing the changes made to the virtual machine.",
-                "type": "string",
-            }
-        },
-        "required": ["message"],
-        "type": "object",
     },
 }
 
@@ -465,7 +467,7 @@ argument_spec['ccc'] = {'type': 'str', 'choices': ['a', 'b', 'c']}"""
 
 
 def test_SwaggerFile_load_paths():
-    paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
+    paths = rm.SwaggerFile.load_paths(my_short_sample["paths"])
     assert paths["/rest/vcenter/vm"].operations == {
         "list": (
             "get",
@@ -497,7 +499,7 @@ def test_SwaggerFile_load_paths():
 
 
 def test_SwaggerFile_init_resources():
-    paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
+    paths = rm.SwaggerFile.load_paths(my_short_sample["paths"])
     resources = rm.SwaggerFile.init_resources(paths.values())
 
     assert resources["vcenter_vm"].name == "vcenter_vm"
@@ -558,40 +560,37 @@ def test_SwaggerFile_init_resources():
 
 # AnsibleModuleBase
 def test_AnsibleModuleBase():
-    paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
+    paths = rm.SwaggerFile.load_paths(my_short_sample["paths"])
     resources = rm.SwaggerFile.init_resources(paths.values())
-    definitions = rm.Definitions(my_definitions)
-    module = rm.AnsibleModuleBase(resources["vcenter_vm"], definitions)
+    module = rm.AnsibleModuleBase(resources["vcenter_vm"])
     assert module.name == "vcenter_vm"
 
 
 # AnsibleInfoModule
 # AnsibleInfoModule
 def test_payload():
-    paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
+    paths = rm.SwaggerFile.load_paths(my_short_sample["paths"])
     resources = rm.SwaggerFile.init_resources(paths.values())
-    definitions = rm.Definitions(my_definitions)
-    module = rm.AnsibleModule(resources["vcenter_vm"], definitions)
+    module = rm.AnsibleModule(resources["vcenter_vm"])
     assert module.payload() == {}
-    module = rm.AnsibleInfoModule(resources["vcenter_vm"], definitions)
+    module = rm.AnsibleInfoModule(resources["vcenter_vm"])
     assert module.payload() == {
         "get": {"body": {}, "path": {"vm": "vm"}, "query": {}},
         "list": {"body": {}, "path": {}, "query": {"filter.vms": "filter.vms"}},
     }
-    paths = rm.SwaggerFile.load_paths(my_raw_paths_data_with_param_in_path)
+    rm.expand_ref(my_bigger_sample)
+    paths = rm.SwaggerFile.load_paths(my_bigger_sample["paths"])
     resources = rm.SwaggerFile.init_resources(paths.values())
-    definitions = rm.Definitions(my_definitions)
     module = rm.AnsibleInfoModule(
-        resources["vcenter_vmtemplate_libraryitems_checkouts"], definitions
+        resources["vcenter_vmtemplate_libraryitems_checkouts"]
     )
     assert module.payload() == {}
 
 
 def test_AnsibleInfoModule_parameters():
-    paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
+    paths = rm.SwaggerFile.load_paths(my_short_sample["paths"])
     resources = rm.SwaggerFile.init_resources(paths.values())
-    definitions = rm.Definitions(my_definitions)
-    module = rm.AnsibleInfoModule(resources["vcenter_vm"], definitions)
+    module = rm.AnsibleInfoModule(resources["vcenter_vm"])
     assert module.name == "vcenter_vm_info"
     assert module.parameters() == [
         {
@@ -619,22 +618,19 @@ def test_AnsibleInfoModule_parameters():
 
 # AnsibleModule
 def test_AnsibleModule_parameters():
-    paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
+    paths = rm.SwaggerFile.load_paths(my_short_sample["paths"])
     resources = rm.SwaggerFile.init_resources(paths.values())
-    definitions = rm.Definitions(my_definitions)
-    module = rm.AnsibleModule(resources["vcenter_vm"], definitions)
+    module = rm.AnsibleModule(resources["vcenter_vm"])
     assert module.name == "vcenter_vm"
     assert module.parameters() == [{"enum": [], "name": "state", "type": "str"}]
 
 
 # AnsibleModule - with complex URL
 def test_AnsibleModule_parameters_complex():
-    paths = rm.SwaggerFile.load_paths(my_raw_paths_data_with_param_in_path)
+    rm.expand_ref(my_bigger_sample)
+    paths = rm.SwaggerFile.load_paths(my_bigger_sample["paths"])
     resources = rm.SwaggerFile.init_resources(paths.values())
-    definitions = rm.Definitions(my_definitions)
-    module = rm.AnsibleModule(
-        resources["vcenter_vmtemplate_libraryitems_checkouts"], definitions
-    )
+    module = rm.AnsibleModule(resources["vcenter_vmtemplate_libraryitems_checkouts"])
     assert module.name == "vcenter_vmtemplate_libraryitems_checkouts"
     assert module.parameters() == [
         {
@@ -813,3 +809,39 @@ def test_AnsibleModule_parameters_complex():
 )
 def test_path_to_name(path, name):
     assert rm.path_to_name(path) == name
+
+
+def test_expand_ref():
+    raw = {
+        "paths": {
+            "/blabla": {
+                "put": {
+                    "parameters": [
+                        {
+                            "schema": {
+                                "description": "My original message",
+                                "$ref": "#/definitions/SomeRef",
+                            }
+                        },
+                        {"schema": {"$ref": "#/definitions/SomeRef"}},
+                    ]
+                }
+            }
+        },
+        "definitions": {
+            "SomeRef": {
+                "$ref": "#/definitions/SomeMoreRef",
+                "description": "The information needed.",
+            },
+            "SomeMoreRef": {
+                "description": "The information needed for some more ref.",
+                "a": "key",
+            },
+        },
+    }
+
+    rm.expand_ref(raw)
+    assert raw["paths"]["/blabla"]["put"]["parameters"] == [
+        {"schema": {"description": "My original message", "a": "key"}},
+        {"schema": {"description": "The information needed.", "a": "key"}},
+    ]
