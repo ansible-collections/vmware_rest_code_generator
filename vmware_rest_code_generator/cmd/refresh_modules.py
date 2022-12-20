@@ -1014,7 +1014,8 @@ def main():
     for json_file in ["vcenter.json", "content.json", "appliance.json"]:
         print("Generating modules from {}".format(json_file))
         raw_content = pkg_resources.resource_string(
-            "vmware_rest_code_generator", f"api_specifications/7.0.2/{json_file}"
+            "vmware_rest_code_generator",
+            f"api_specifications/7.0.3_openapi3/{json_file}",
         )
         swagger_file = SwaggerFile(raw_content)
         resources = swagger_file.init_resources(swagger_file.paths.values())
