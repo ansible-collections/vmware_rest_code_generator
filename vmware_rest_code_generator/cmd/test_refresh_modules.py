@@ -342,6 +342,8 @@ def test_python_type():
     assert rm.python_type("array") == "list"
     assert rm.python_type("list") == "list"
     assert rm.python_type("boolean") == "bool"
+    assert rm.python_type("object") == "dict"
+    assert rm.python_type("string") == "str"
 
 
 def test_path_to_name():
@@ -372,11 +374,6 @@ def test_gen_documentation(m_get_module_from_config):
     added_ins = {"parameters": {}, "module": None}
     a = rm.gen_documentation("foo", "bar", my_parameters, added_ins, "1.2.3")
     assert a["options"]["vcenter_password"]
-
-
-def test_python_type():
-    assert rm.python_type("object") == "dict"
-    assert rm.python_type("string") == "str"
 
 
 def test_format_documentation():
