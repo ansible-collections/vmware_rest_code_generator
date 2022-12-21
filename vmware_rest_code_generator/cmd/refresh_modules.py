@@ -178,7 +178,9 @@ class Description:
             ).rstrip()
 
 
-def gen_documentation(name, description, parameters, added_ins, next_version):
+def gen_documentation(
+    name, target_dir: pathlib.Path, description, parameters, added_ins, next_version
+):
 
     short_description = description.split(". ")[0]
     documentation = {
@@ -302,7 +304,7 @@ def gen_documentation(name, description, parameters, added_ins, next_version):
         documentation["options"][normalized_name] = option
         parameter["added_in"] = next_version
 
-    module_from_config = get_module_from_config(name, "vmware_rest_code_generator")
+    module_from_config = get_module_from_config(name, target_dir)
     if module_from_config and "documentation" in module_from_config:
         for k, v in module_from_config["documentation"].items():
             documentation[k] = v
@@ -767,6 +769,7 @@ class AnsibleModuleBase(UtilsBase):
         documentation = format_documentation(
             gen_documentation(
                 self.name,
+                target_dir,
                 self.description(),
                 self.parameters(),
                 added_ins,
@@ -777,7 +780,7 @@ class AnsibleModuleBase(UtilsBase):
 
         content = jinja2_renderer(
             self.template_file,
-            "vmware_rest_code_generator",
+            target_dir=target_dir,
             arguments=indent(arguments, 4),
             documentation=documentation,
             list_index=self.list_index(),
@@ -1029,7 +1032,7 @@ def main():
                     resource, definitions=swagger_file.definitions
                 )
                 if (
-                    module.is_trusted("vmware_rest_code_generator")
+                    module.is_trusted(target_dir=args.target_dir)
                     and len(module.default_operationIds) > 0
                 ):
                     module.renderer(
@@ -1041,7 +1044,7 @@ def main():
                     resource, definitions=swagger_file.definitions
                 )
                 if (
-                    module.is_trusted("vmware_rest_code_generator")
+                    module.is_trusted(target_dir=args.target_dir)
                     and len(module.default_operationIds) > 0
                 ):
                     module.renderer(
@@ -1052,7 +1055,7 @@ def main():
             module = AnsibleModule(resource, definitions=swagger_file.definitions)
 
             if (
-                module.is_trusted("vmware_rest_code_generator")
+                module.is_trusted(target_dir=args.target_dir)
                 and len(module.default_operationIds) > 0
             ):
                 module.renderer(
