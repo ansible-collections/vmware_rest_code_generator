@@ -5,7 +5,7 @@ import types
 from unittest.mock import patch
 
 
-import vmware_rest_code_generator.cmd.refresh_modules as rm
+import gouttelette.cmd.refresh_modules as rm
 
 my_parameters = [
     {"name": "aaa", "type": "boolean", "description": "a second parameter"},
@@ -368,11 +368,11 @@ def test_path_to_name():
     )
 
 
-@patch("vmware_rest_code_generator.cmd.refresh_modules.get_module_from_config")
+@patch("gouttelette.cmd.refresh_modules.get_module_from_config")
 def test_gen_documentation(m_get_module_from_config):
     m_get_module_from_config.return_value = {}
     added_ins = {"parameters": {}, "module": None}
-    a = rm.gen_documentation("foo", "bar", my_parameters, added_ins, "1.2.3")
+    a = rm.gen_documentation("foo", "bar", my_parameters, added_ins, "1.2.3", ".")
     assert a["options"]["vcenter_password"]
 
 
@@ -556,12 +556,12 @@ def test_SwaggerFile_init_resources():
     }
 
 
-# AnsibleModuleBase
-def test_AnsibleModuleBase():
+# AnsibleModuleBaseVmware
+def test_AnsibleModuleBaseVmware():
     paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
     resources = rm.SwaggerFile.init_resources(paths.values())
     definitions = rm.Definitions(my_definitions)
-    module = rm.AnsibleModuleBase(resources["vcenter_vm"], definitions)
+    module = rm.AnsibleModuleBaseVmware(resources["vcenter_vm"], definitions)
     assert module.name == "vcenter_vm"
 
 
@@ -571,7 +571,7 @@ def test_payload():
     paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
     resources = rm.SwaggerFile.init_resources(paths.values())
     definitions = rm.Definitions(my_definitions)
-    module = rm.AnsibleModule(resources["vcenter_vm"], definitions)
+    module = rm.AnsibleModuleBaseVmware(resources["vcenter_vm"], definitions)
     assert module.payload() == {}
     module = rm.AnsibleInfoModule(resources["vcenter_vm"], definitions)
     assert module.payload() == {
@@ -617,22 +617,22 @@ def test_AnsibleInfoModule_parameters():
     ]
 
 
-# AnsibleModule
+# AnsibleModuleBaseVmware
 def test_AnsibleModule_parameters():
     paths = rm.SwaggerFile.load_paths(my_raw_paths_data)
     resources = rm.SwaggerFile.init_resources(paths.values())
     definitions = rm.Definitions(my_definitions)
-    module = rm.AnsibleModule(resources["vcenter_vm"], definitions)
+    module = rm.AnsibleModuleBaseVmware(resources["vcenter_vm"], definitions)
     assert module.name == "vcenter_vm"
     assert module.parameters() == [{"enum": [], "name": "state", "type": "str"}]
 
 
-# AnsibleModule - with complex URL
+# AnsibleModuleBaseVmware - with complex URL
 def test_AnsibleModule_parameters_complex():
     paths = rm.SwaggerFile.load_paths(my_raw_paths_data_with_param_in_path)
     resources = rm.SwaggerFile.init_resources(paths.values())
     definitions = rm.Definitions(my_definitions)
-    module = rm.AnsibleModule(
+    module = rm.AnsibleModuleBaseVmware(
         resources["vcenter_vmtemplate_libraryitems_checkouts"], definitions
     )
     assert module.name == "vcenter_vmtemplate_libraryitems_checkouts"
