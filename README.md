@@ -1,5 +1,8 @@
 # vmware_rest code generator
 
+**IMPORTANT**
+The `vmware_rest_code_generator` repository has been archived. Refer to the [`ansible.content_builder`](https://github.com/ansible-community/ansible.content_builder) instead.
+
 We use this repository to generate the ``vmware.vmware_rest`` collection.
 
 ## Requirements
